@@ -1,108 +1,74 @@
 <!DOCTYPE html>
-
 <html>
 <head>
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#1b5e20">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta charset="UTF-8">
-
-<title>Rugby Stats</title>
-
-<link rel="stylesheet" href="style.css">
-
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1b5e20">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0>
+    <meta charset="UTF-8">
+    <title>Rugby Stats</title>
+    <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
 
 <div id="pantallaConfig">
+    <div class="headerConfig">
+        <h2>Preparar Partido</h2>
+        
+        <div class="linea">
+            <input id="sheetID" placeholder="Link o ID Google Sheet">
+            <button onclick="importarJugadoresSheet()">Cargar</button>
+        </div>
 
-<h2>Preparar Partido</h2>
+        <div class="linea">
+            <input id="equipo" placeholder="Equipo">
+            <input id="rival" placeholder="Rival">
+        </div>
 
-<div class="linea">
+        <div class="linea">
+            <input id="buscarJugador" placeholder="Buscar..." oninput="filtrarJugadores()">
+            <span id="contador">0 / 15</span>
+        </div>
+    </div>
 
-<input id="sheetID" placeholder="Link o ID Google Sheet">
+    <div id="tablaJugadores"></div>
 
-<button onclick="importarJugadoresSheet()">Cargar jugadores</button>
-
-</div>
-
-<div class="linea">
-
-Equipo <input id="equipo">
-
-Rival <input id="rival">
-
-</div>
-
-<div class="linea">
-
-Buscar <input id="buscarJugador" oninput="filtrarJugadores()">
-
-<span id="contador">0 / 15</span>
-
-</div>
-
-<div id="tablaJugadores"></div>
-
-<div class="linea botones">
-
-<button id="btnIniciar" onclick="iniciarPartido()" disabled>Iniciar</button>
-
-<button onclick="exportarEventos()">Exportar</button>
-
-<button onclick="borrarSeleccion()">Borrar</button>
-
-</div>
-
+    <div class="linea botones">
+        <button id="btnIniciar" onclick="iniciarPartido()" disabled>Iniciar</button>
+        <button onclick="exportarEventos()">Exportar</button>
+        <button onclick="borrarSeleccion()">Borrar</button>
+    </div>
 </div>
 
 <div id="pantallaPartido" style="display:none">
+    <div class="headerPartido">
+        <div id="cronometro">00:00</div>
+        <div id="infoPartido"></div>
+        <div id="amarillas"></div>
+    </div>
 
-<div class="headerPartido">
+    <div class="barraControles">
+        <button id="btnCrono" onclick="iniciarCrono()">Iniciar</button>
+        <button id="toggleModo" onclick="toggleModo()">Apodos</button>
+        <button onclick="modoCambios()">Cambios</button>
+        <button onclick="finalizarPartido()">Finalizar</button>
+    </div>
 
-<div id="cronometro">00:00</div>
+    <div class="zonaJuego">
+        <div id="jugadores" class="grid"></div>
+        <h3>Acciones</h3>
+        <div id="acciones" class="grid"></div>
+    </div>
 
-<div id="infoPartido"></div>
-
-<div id="amarillas"></div>
-
-</div>
-
-<div class="barraControles">
-
-<button id="btnCrono" onclick="iniciarCrono()">Iniciar</button>
-
-<button id="toggleModo" onclick="toggleModo()">Apodos</button>
-
-<button onclick="modoCambios()">Cambios</button>
-
-<button onclick="finalizarPartido()">Finalizar</button>
-
-</div>
-
-<div id="jugadores" class="grid"></div>
-
-<h3>Acciones</h3>
-
-<div id="acciones" class="grid"></div>
-
-<div id="ultima">Sin eventos</div>
-
+    <div id="ultima">Sin eventos</div>
 </div>
 
 <script src="storage.js"></script>
-
 <script src="sheet.js"></script>
-
 <script src="app.js"></script>
-
 <script>
-if("serviceWorker" in navigator){
-navigator.serviceWorker.register("service-worker.js")
-}
+    if("serviceWorker" in navigator){
+        navigator.serviceWorker.register("service-worker.js")
+    }
 </script>
-
 </body>
-
 </html>
