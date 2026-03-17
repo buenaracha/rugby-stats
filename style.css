@@ -1,0 +1,98 @@
+body{
+font-family:Arial;
+margin:10px;
+}
+
+.linea{
+margin:10px 0;
+display:flex;
+gap:10px;
+align-items:center;
+flex-wrap:wrap;
+}
+
+/* barra controles partido en una sola línea */
+#pantallaPartido .linea{
+flex-wrap:nowrap;
+overflow:hidden;
+gap:4px;
+}
+
+#pantallaPartido .linea button{
+padding:4px 6px;
+font-size:clamp(10px,2vw,14px);
+min-height:auto;
+flex-shrink:1;
+}
+
+.headerPartido{
+display:flex;
+justify-content:space-between;
+align-items:center;
+flex-wrap:wrap;
+margin-bottom:10px;
+}
+
+#cronometro{
+font-size:32px;
+font-weight:bold;
+}
+
+.barraControles{
+display:flex;
+gap:8px;
+flex-wrap:nowrap;
+margin-bottom:10px;
+}
+
+.grid{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
+gap:6px;
+}
+
+#tablaJugadores{
+height:50vh;
+overflow-y:scroll;
+border:1px solid #ccc;
+}
+
+.filaJugador{
+display:grid;
+grid-template-columns:60px 40px 1fr 120px;
+gap:6px;
+padding:4px;
+align-items:center;
+border-bottom:1px solid #eee;
+}
+
+button{
+padding:10px;
+font-size:16px;
+min-height:50px;
+}
+
+/* botones jugadores */
+
+#jugadores button{
+background:#4caf50;
+color:white;
+font-weight:bold;
+}
+
+/* jugador seleccionado */
+
+.jugadorSeleccionado{
+background:#ffb300 !important;
+color:black;
+}
+
+.accion{
+white-space:nowrap;
+}
+
+#cronometro{
+font-size:28px;
+font-weight:bold;
+min-width:90px;
+}

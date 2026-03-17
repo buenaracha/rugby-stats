@@ -1,0 +1,21 @@
+{
+"name": "Rugby Stats",
+"short_name": "RugbyStats",
+"start_url": "index.html",
+"display": "standalone",
+"background_color": "#1b5e20",
+"theme_color": "#1b5e20",
+"orientation": "landscape",
+"icons":[
+{
+"src":"icon.png",
+"sizes":"192x192",
+"type":"image/png"
+},
+{
+"src":"icon512.png",
+"sizes":"512x512",
+"type":"image/png"
+}
+]
+}
