@@ -3,7 +3,7 @@
 <head>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1b5e20">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta charset="UTF-8">
     <title>Rugby Stats</title>
     <link rel="stylesheet" href="style.css">
@@ -15,16 +15,16 @@
         <h2>Preparar Partido</h2>
         
         <div class="linea">
-            <input id="sheetID" placeholder="Link o ID Google Sheet">
-            <button onclick="importarJugadoresSheet()">Cargar</button>
+            <input id="sheetID" placeholder="ID Google Sheet" style="flex: 2;">
+            <button onclick="importarJugadoresSheet()" style="flex: 1;">Cargar</button>
         </div>
 
-        <div class="linea">
+        <div class="linea-doble">
             <input id="equipo" placeholder="Equipo">
             <input id="rival" placeholder="Rival">
         </div>
 
-        <div class="linea">
+        <div class="linea-doble">
             <input id="buscarJugador" placeholder="Buscar..." oninput="filtrarJugadores()">
             <span id="contador">0 / 15</span>
         </div>
@@ -48,7 +48,7 @@
 
     <div class="barraControles">
         <button id="btnCrono" onclick="iniciarCrono()">Iniciar</button>
-        <button id="toggleModo" onclick="toggleModo()">Apodos</button>
+        <button id="toggleModo" onclick="toggleModo()">Modo</button>
         <button onclick="modoCambios()">Cambios</button>
         <button onclick="finalizarPartido()">Finalizar</button>
     </div>
@@ -65,10 +65,5 @@
 <script src="storage.js"></script>
 <script src="sheet.js"></script>
 <script src="app.js"></script>
-<script>
-    if("serviceWorker" in navigator){
-        navigator.serviceWorker.register("service-worker.js")
-    }
-</script>
 </body>
 </html>
