@@ -27,30 +27,55 @@ let acciones=[
 "Tarjeta 🟥"
 ]
 
-function mostrarTablaJugadores(){
+// Agrega esto al inicio de app.js
+const DEBUG = true;
 
-let cont=document.getElementById("tablaJugadores")
-cont.innerHTML=""
+function logOri(componente, mensaje, dato = '') {
+  if (!DEBUG) return;
+  console.log(`🔍 [${componente}] ${mensaje}`, dato);
+}
 
-jugadores.forEach(j=>{
+function logDimensionesOri(elemento, nombre) {
+  if (!DEBUG) return;
+  const rect = elemento.getBoundingClientRect();
+  console.log(`📏 [${nombre}]`, {
+    height: rect.height,
+    top: rect.top,
+    bottom: rect.bottom,
+    scrollHeight: elemento.scrollHeight,
+    clientHeight: elemento.clientHeight,
+    overflowY: getComputedStyle(elemento).overflowY,
+    display: getComputedStyle(elemento).display,
+    flex: getComputedStyle(elemento).flex
+  });
+}
 
-let fila=document.createElement("div")
+// Modifica mostrarTablaJugadores() para respetar los titulares actuales
+function mostrarTablaJugadores() {
+  let cont = document.getElementById("tablaJugadores")
+  cont.innerHTML = ""
 
-fila.className="filaJugador"
+  jugadores.forEach(j => {
+    // Buscar si el jugador está en titulares
+    const titular = titulares.find(t => t.dni === j.dni)
+    
+    let fila = document.createElement("div")
+    fila.className = "filaJugador"
 
-fila.innerHTML=`
-<input type="number" min="1" max="99" value="${j.camiseta||""}" data-dni="${j.dni}"> <input type="checkbox" data-dni="${j.dni}">
+    // Usar el número del titular si existe, sino el del jugador
+    const numeroCamiseta = titular ? titular.numero : (j.camiseta || "")
+    
+    fila.innerHTML = `
+      <input type="number" min="1" max="99" value="${numeroCamiseta}" data-dni="${j.dni}">
+      <input type="checkbox" data-dni="${j.dni}" ${titular ? 'checked' : ''}>
+      <div>${j.nombre}</div>
+      <div>${j.apodo}</div>
+    `
 
-<div>${j.nombre}</div>
-<div>${j.apodo}</div>
-`
+    cont.appendChild(fila)
+  })
 
-cont.appendChild(fila)
-
-})
-
-actualizarSeleccion()
-
+  actualizarSeleccion()
 }
 
 function filtrarJugadores(){
@@ -92,107 +117,82 @@ guardarJugadores()
 
 })
 
-function actualizarSeleccion(){
+// Mejora actualizarSeleccion() para manejar correctamente las tarjetas amarillas
+function actualizarSeleccion() {
+  let checks = [...document.querySelectorAll("#tablaJugadores input[type=checkbox]")]
+  let seleccionados = checks.filter(c => c.checked)
 
-let checks=[...document.querySelectorAll("#tablaJugadores input[type=checkbox]")]
-let seleccionados=checks.filter(c=>c.checked)
+  document.getElementById("contador").innerText = `${seleccionados.length} / 15`
 
-document.getElementById("contador").innerText=
-`${seleccionados.length} / 15`
+  // Primero, habilitar todos los checks
+  checks.forEach(c => {
+    c.disabled = false
+  })
 
-checks.forEach(c=>{
+  // Luego, aplicar reglas
+  checks.forEach(c => {
+    let dni = c.dataset.dni
+    
+    // Verificar si está suspendido por amarilla
+    let suspendido = jugadorSuspendido(dni)
+    
+    if (suspendido) {
+      c.checked = true
+      c.disabled = true
+      return
+    }
+    
+    // Si ya hay 15 seleccionados y este no está seleccionado, deshabilitarlo
+    if (seleccionados.length >= 15 && !c.checked) {
+      c.disabled = true
+    }
+  })
 
-let dni=c.dataset.dni
-let suspendido=jugadorSuspendido(dni)
-
-if(suspendido){
-c.checked=true
-c.disabled=true
-return
+  document.getElementById("btnIniciar").disabled = seleccionados.length !== 15
 }
 
-if(seleccionados.length>=15 && !c.checked){
-c.disabled=true
-}else{
-c.disabled=false
-}
+// Modifica iniciarPartido() para mantener la coherencia
+function iniciarPartido() {
+  equipoActual = document.getElementById("equipo").value
+  rivalActual = document.getElementById("rival").value
 
-})
+  partidoID = new Date().toISOString().slice(0, 10) + "*" + equipoActual + "*" + rivalActual
 
-document.getElementById("btnIniciar").disabled=
-seleccionados.length!==15
+  // Actualizar titulares con la selección actual
+  titulares = []
+  
+  document.querySelectorAll("#tablaJugadores .filaJugador").forEach(f => {
+    let num = f.children[0].value
+    let check = f.children[1]
 
-}
+    if (check.checked) {
+      let dni = check.dataset.dni
+      let j = jugadores.find(x => x.dni == dni)
+      
+      titulares.push({
+        dni: j.dni,
+        nombre: j.nombre,
+        apodo: j.apodo,
+        numero: num || j.camiseta || ""
+      })
+    }
+  })
 
-function iniciarPartido(){
-let titularesPrevios=[...titulares]
+  // Registrar cambios si había titulares previos (para cambios durante el partido)
+  if (partidoIniciado) {
+    // Lógica para registrar cambios si es necesario
+  }
 
-equipoActual=document.getElementById("equipo").value
-rivalActual=document.getElementById("rival").value
+  document.getElementById("pantallaConfig").style.display = "none"
+  document.getElementById("pantallaPartido").style.display = "block"
 
-partidoID=
-new Date().toISOString().slice(0,10)+"*"+equipoActual+"*"+rivalActual
+  document.getElementById("infoPartido").innerText = equipoActual + " vs " + rivalActual
 
-titulares=[]
-if(titularesPrevios.length){
+  crearJugadores()
+  crearAcciones()
+  actualizarBotonInicio()
 
-titularesPrevios.forEach(j=>{
-
-if(!titulares.find(x=>x.dni==j.dni)){
-registrarCambio(j.dni,"")
-}
-
-})
-
-titulares.forEach(j=>{
-
-if(!titularesPrevios.find(x=>x.dni==j.dni)){
-registrarCambio("",j.dni)
-}
-
-})
-
-}
-
-document.querySelectorAll("#tablaJugadores .filaJugador")
-.forEach(f=>{
-
-let num=f.children[0].value
-let check=f.children[1]
-
-if(check.checked){
-
-let dni=check.dataset.dni
-let j=jugadores.find(x=>x.dni==dni)
-
-titulares.push({
-dni:j.dni,
-nombre:j.nombre,
-apodo:j.apodo,
-numero:num||j.camiseta||""
-})
-
-}
-
-})
-
-if(segundos===0){
-partidoFinalizado=false
-document.getElementById("cronometro").innerText="00:00"
-}
-
-document.getElementById("pantallaConfig").style.display="none"
-document.getElementById("pantallaPartido").style.display="block"
-
-document.getElementById("infoPartido").innerText=
-equipoActual+" vs "+rivalActual
-
-crearJugadores()
-crearAcciones()
-actualizarBotonInicio()
-
-partidoIniciado=true
-
+  partidoIniciado = true
 }
 
 function crearJugadores(){
@@ -367,38 +367,76 @@ actualizarAmarillas()
 
 },1000)
 
-function modoCambios(){
-
-document.getElementById("pantallaPartido").style.display="none"
-document.getElementById("pantallaConfig").style.display="block"
-
-if(partidoIniciado){
-document.getElementById("btnIniciar").innerText="Continuar"
+function mostrarPantallaConfig() {
+  // Ocultar partido
+  document.getElementById("pantallaPartido").style.display = "none"
+  
+  // Resetear completamente la pantalla de configuración
+  const config = document.getElementById("pantallaConfig");
+  config.style.display = "block";
+  
+  // Forzar que la pantalla tenga la altura exacta del viewport
+  config.style.height = window.innerHeight + 'px';
+  
+  // Resetear la tabla
+  const tabla = document.getElementById("tablaJugadores");
+  tabla.style.height = ''; // Limpiar altura fija
+  tabla.style.maxHeight = '';
+  
+  // Limpiar y recrear
+  mostrarTablaJugadores();
+  actualizarSeleccion();
+  
+  // Múltiples intentos de forzar el layout correcto
+  setTimeout(() => {
+    // Método 1: Disparar evento resize
+    window.dispatchEvent(new Event('resize'));
+    
+    // Método 2: Forzar reflow
+    void config.offsetHeight;
+    void tabla.offsetHeight;
+    
+    // Método 3: Ajustar alturas
+    const headerHeight = document.querySelector('.headerConfig').offsetHeight;
+    const botonesHeight = document.querySelector('.botones').offsetHeight;
+    const tablaHeight = config.clientHeight - headerHeight - botonesHeight - 30; // 30 de padding
+    
+    tabla.style.height = tablaHeight + 'px';
+    tabla.style.maxHeight = tablaHeight + 'px';
+    
+  }, 50);
 }
 
+function modoCambios() {
+  
+  mostrarPantallaConfig()
+  
+  if (partidoIniciado) {
+    document.getElementById("btnIniciar").innerText = "Continuar"
+  }
+  
 }
 
-function finalizarPartido(){
-
-if(!confirm("Finalizar partido?")) return
-
-corriendo=false
-segundos=0
-
-amarillas=[]
-
-document.getElementById("cronometro").innerText="00:00"
-document.getElementById("amarillas").innerHTML=""
-document.getElementById("ultima").innerText="Sin eventos"
-
-document.getElementById("pantallaPartido").style.display="none"
-document.getElementById("pantallaConfig").style.display="block"
-
-document.getElementById("btnIniciar").innerText="Iniciar"
-
-partidoFinalizado=true
-partidoIniciado=false
-
+function finalizarPartido() {
+  
+  if (!confirm("Finalizar partido?")) {
+    return
+  }
+    
+  corriendo = false
+  segundos = 0
+  amarillas = []
+  
+  document.getElementById("cronometro").innerText = "00:00"
+  document.getElementById("amarillas").innerHTML = ""
+  document.getElementById("ultima").innerText = "Sin eventos"
+  
+  mostrarPantallaConfig()
+  
+  document.getElementById("btnIniciar").innerText = "Iniciar"
+  
+  partidoFinalizado = true
+  partidoIniciado = false
 }
 
 function borrarSeleccion(){
