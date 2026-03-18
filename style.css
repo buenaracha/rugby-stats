@@ -1,165 +1,201 @@
-/* --- RESET Y CONFIGURACIÓN BASE --- */
-* {
-  box-sizing: border-box;
-  -webkit-tap-highlight-color: transparent;
-  margin: 0;
-  padding: 0;
+/* --- BASE --- */
+* { 
+  box-sizing: border-box; 
+  -webkit-tap-highlight-color: transparent; 
+  margin: 0; 
+  padding: 0; 
 }
 
-body, html {
-  height: 100%; /* Necesario para el layout vertical */
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  background-color: #f0f2f5;
-  color: #1a1a1a;
-  overflow: hidden; /* Evita el scroll global del cuerpo */
+body, html { 
+  height: 100%; 
+  font-family: sans-serif; 
+  background: #f0f2f5; 
+  overflow: hidden;
+  position: fixed; /* Añade esto */
+  width: 100%;
 }
 
-/* --- CONTENEDORES DE PANTALLA --- */
-#pantallaConfig, #pantallaPartido {
-  display: flex;
-  flex-direction: column;
-  height: 100vh; /* Ocupa todo el alto de la pantalla */
-  padding: 15px;
+/* Contenedores principales */
+/* Asegurar que los contenedores siempre tengan altura calculable */
+#pantallaConfig, #pantallaPartido { 
+  display: flex; 
+  flex-direction: column; 
+  height: 100%;
+  padding: 10px;
+  overflow: hidden;
+  min-height: 0;
+  position: absolute; /* Cambia a absolute */
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
 }
 
-/* --- PANTALLA DE CONFIGURACIÓN (STICKY TOP/BOTTOM) --- */
-
-h2 {
-  padding-bottom: 10px;
-  text-align: center;
-  color: #1b5e20;
+/* --- PANTALLA CONFIGURACIÓN --- */
+.headerConfig { 
+  flex: 0 0 auto;
+  margin-bottom: 5px;
+  /* Asegura que el header no se estire */
+  min-height: min-content;
 }
 
-.linea {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
-  flex-shrink: 0; /* Evita que los controles se achiquen */
+.linea, .linea-doble { 
+  display: flex; 
+  gap: 5px; 
+  margin-bottom: 8px; 
 }
 
-/* Para que los inputs y botones en línea se vean bien */
-.linea input {
-  flex: 1;
-  padding: 12px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  font-size: 16px; /* Evita zoom automático en iOS */
+.linea input, .linea-doble input { 
+  flex: 1; 
+  min-width: 0; 
+  padding: 12px; 
+  border-radius: 8px; 
+  border: 1px solid #ccc; 
+  font-size: 16px;
 }
 
-/* --- EL ÁREA DE SCROLL (TABLA JUGADORES) --- */
-#tablaJugadores {
-  flex-grow: 1; /* Ocupa todo el espacio sobrante entre arriba y abajo */
-  overflow-y: auto; /* Solo esta parte tiene scroll */
-  background: white;
+/* Mejorar el contenedor de tabla */
+#tablaJugadores { 
+  flex: 1 1 auto;
+  overflow-y: auto; 
+  min-height: 0;
+  max-height: 100%; /* Limita la altura máxima */
+  background: white; 
+  border-radius: 8px; 
   border: 1px solid #ddd;
-  border-radius: 10px;
-  margin-bottom: 12px;
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+  /* Asegura que respete los límites del contenedor */
+  height: 0; /* Esto fuerza al flex a calcular bien */
 }
 
+/* Mejorar el rendimiento del scroll en móviles */
 .filaJugador {
   display: grid;
-  grid-template-columns: 50px 40px 1fr 100px;
-  gap: 8px;
-  padding: 12px 8px;
-  align-items: center;
+  grid-template-columns: 50px 35px 1fr 1fr;
+  gap: 5px;
+  padding: 10px 5px;
   border-bottom: 1px solid #eee;
-}
-
-/* --- BOTONES --- */
-button {
-  padding: 12px 16px;
-  font-size: 15px;
-  font-weight: bold;
-  border: none;
-  border-radius: 8px;
-  background-color: #1b5e20;
-  color: white;
-  cursor: pointer;
-  min-height: 48px;
-  display: flex;
   align-items: center;
-  justify-content: center;
-  transition: background 0.2s, transform 0.1s;
+  -webkit-overflow-scrolling: touch; /* Scroll suave en iOS */
 }
 
-button:active {
-  transform: scale(0.96);
-  filter: brightness(1.2);
+.botones { 
+  display: grid; 
+  grid-template-columns: repeat(3, 1fr); 
+  gap: 5px; 
+  flex: 0 0 auto;
+  padding-top: 8px;
+  /* Asegura que no se estiren */
+  min-height: min-content;
 }
 
 button:disabled {
-  background-color: #bdbdbd;
-  color: #f5f5f5;
+  background: #999 !important;
+  color: #ddd;
 }
 
-.botones {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr; /* Tres botones iguales abajo */
-  gap: 8px;
-  padding-top: 5px;
-  flex-shrink: 0; /* Siempre visible al fondo */
+/* --- PANTALLA PARTIDO --- */
+.headerPartido { 
+  display: grid; 
+  grid-template-columns: 90px 1fr 80px; 
+  align-items: center; 
+  background: white; 
+  padding: 8px; 
+  border-radius: 8px; 
+  flex: 0 0 auto;
+  margin-bottom: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-/* --- PANTALLA DE PARTIDO --- */
-
-.headerPartido {
-  background: #fff;
-  padding: 15px;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  margin-bottom: 15px;
-  text-align: center;
-  flex-shrink: 0;
+#cronometro { 
+  font-size: 26px; 
+  font-weight: bold; 
+  color: #1b5e20; 
 }
 
-#cronometro {
-  font-size: 48px;
-  font-weight: 800;
-  color: #1b5e20;
-  font-family: monospace;
+#infoPartido { 
+  font-weight: bold; 
+  font-size: 13px; 
+  text-align: center; 
+  line-height: 1.2; 
 }
 
-.barraControles {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
-  margin-bottom: 15px;
-  flex-shrink: 0;
+#amarillas { 
+  font-size: 10px; 
+  color: #d32f2f; 
+  text-align: right; 
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-  gap: 8px;
-  overflow-y: auto; /* Si hay muchos jugadores o acciones, permiten scroll interno */
+.barraControles { 
+  display: grid; 
+  grid-template-columns: repeat(4, 1fr); 
+  gap: 4px; 
+  flex: 0 0 auto;
+  margin-bottom: 8px; 
 }
 
-#jugadores button {
-  height: 65px;
-  background-color: #43a047;
-  text-transform: uppercase;
-  font-size: 13px;
-  line-height: 1.2;
+.barraControles button { 
+  font-size: 10px; 
+  padding: 5px 2px; 
+  height: 45px; 
+  background: #555;
 }
 
-#jugadores .jugadorSeleccionado {
-  background-color: #ffb300 !important;
-  color: #000;
-  box-shadow: 0 0 0 3px #fb8c00;
+/* Zona central de juego */
+.zonaJuego { 
+  flex: 1 1 auto;
+  overflow-y: auto;
+  min-height: 0;
 }
 
-#acciones button {
-  height: 55px;
-  background-color: #0288d1;
+.grid { 
+  display: grid; 
+  grid-template-columns: repeat(3, 1fr); 
+  gap: 6px; 
 }
 
-#ultima {
-  margin-top: auto;
-  padding: 10px;
-  background: #333;
-  color: #fff;
-  border-radius: 5px;
-  text-align: center;
-  font-size: 14px;
+h3 { 
+  font-size: 14px; 
+  margin: 10px 0 5px; 
+  color: #666; 
+  text-transform: uppercase; 
+}
+
+/* Botones */
+button { 
+  border: none; 
+  border-radius: 6px; 
+  background: #1b5e20; 
+  color: white; 
+  font-weight: bold; 
+  min-height: 44px; 
+}
+
+#jugadores button { 
+  background: #43a047; 
+  height: 55px; 
+  font-size: 12px; 
+}
+
+.jugadorSeleccionado { 
+  background: #ffb300 !important; 
+  color: black; 
+  box-shadow: 0 0 0 2px #000 inset; 
+}
+
+#acciones button { 
+  background: #0288d1; 
+  height: 50px; 
+  font-size: 12px; 
+}
+
+#ultima { 
+  background: #222; 
+  color: #fff; 
+  padding: 8px; 
+  text-align: center; 
+  font-size: 13px; 
+  flex: 0 0 auto;
+  margin-top: 8px; 
+  border-radius: 4px;
 }
