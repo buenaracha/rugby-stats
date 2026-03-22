@@ -46,13 +46,11 @@ if(!c) return
 let dni = c[0]?.v || ""
 
 jugadores.push({
-
-dni: dni,
-nombre: c[1]?.v || "",
-apodo: c[2]?.v || "",
-posicion: c[3]?.v || "",
-camiseta: c[4]?.v || mapaCamisetas[dni] || ""
-
+  dni: dni,
+  nombre: c[1]?.v || "",
+  apodo: c[2]?.v || "",
+  posicion: c[3]?.v || "",
+  camiseta: c[4]?.v || mapaCamisetas[dni] || ""
 })
 
 })
