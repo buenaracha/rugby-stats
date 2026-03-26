@@ -11,12 +11,11 @@ body, html {
   font-family: sans-serif; 
   background: #f0f2f5; 
   overflow: hidden;
-  position: fixed; /* Añade esto */
+  position: fixed;
   width: 100%;
 }
 
 /* Contenedores principales */
-/* Asegurar que los contenedores siempre tengan altura calculable */
 #pantallaConfig, #pantallaPartido { 
   display: flex; 
   flex-direction: column; 
@@ -24,7 +23,7 @@ body, html {
   padding: 10px;
   overflow: hidden;
   min-height: 0;
-  position: absolute; /* Cambia a absolute */
+  position: absolute;
   top: 0;
   left: 0;
   right: 0;
@@ -36,7 +35,6 @@ body, html {
 .headerConfig { 
   flex: 0 0 auto;
   margin-bottom: 5px;
-  /* Asegura que el header no se estire */
   min-height: min-content;
 }
 
@@ -56,20 +54,43 @@ body, html {
   font-size: 16px;
 }
 
-/* Mejorar el contenedor de tabla */
+.contador-container {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: #f5f5f5;
+    border-radius: 8px;
+    padding: 0 8px;
+}
+
+#contador {
+    font-weight: bold;
+    color: #1b5e20;
+    font-size: 16px;
+    white-space: nowrap;
+}
+
+#cantidadJugadores {
+    width: 55px;
+    padding: 10px 4px;
+    text-align: center;
+    font-size: 16px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    background: white;
+}
+
 #tablaJugadores { 
   flex: 1 1 auto;
   overflow-y: auto; 
   min-height: 0;
-  max-height: 100%; /* Limita la altura máxima */
+  max-height: 100%;
   background: white; 
   border-radius: 8px; 
   border: 1px solid #ddd;
-  /* Asegura que respete los límites del contenedor */
-  height: 0; /* Esto fuerza al flex a calcular bien */
+  height: 0;
 }
 
-/* Mejorar el rendimiento del scroll en móviles */
 .filaJugador {
   display: grid;
   grid-template-columns: 50px 35px 1fr 1fr;
@@ -77,7 +98,7 @@ body, html {
   padding: 10px 5px;
   border-bottom: 1px solid #eee;
   align-items: center;
-  -webkit-overflow-scrolling: touch; /* Scroll suave en iOS */
+  -webkit-overflow-scrolling: touch;
 }
 
 .botones { 
@@ -86,26 +107,22 @@ body, html {
   gap: 5px; 
   flex: 0 0 auto;
   padding-top: 8px;
-  /* Asegura que no se estiren */
   min-height: min-content;
 }
 
-button:disabled {
-  background: #999 !important;
-  color: #ddd;
-}
-
 /* --- PANTALLA PARTIDO --- */
-.headerPartido { 
-  display: grid; 
-  grid-template-columns: 90px 1fr 80px; 
-  align-items: center; 
-  background: white; 
-  padding: 8px; 
-  border-radius: 8px; 
-  flex: 0 0 auto;
-  margin-bottom: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+.headerPartido {
+    display: grid;
+    grid-template-columns: auto auto 1fr auto auto;
+    align-items: center;
+    gap: 4px;
+    background: white;
+    padding: 6px 8px;
+    border-radius: 8px;
+    flex: 0 0 auto;
+    margin-bottom: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    min-width: 0;
 }
 
 #cronometro { 
@@ -114,22 +131,40 @@ button:disabled {
   color: #1b5e20; 
 }
 
-#infoPartido { 
-  font-weight: bold; 
-  font-size: 13px; 
-  text-align: center; 
-  line-height: 1.2; 
+#puntosPropio, #puntosRival {
+    font-size: 26px;
+    font-weight: bold;
+    min-width: 45px;
+    text-align: center;
+}
+
+#puntosPropio {
+    color: #0c17f3;
+}
+
+#puntosRival {
+    color: #d32f2f;
+}
+
+.equipos {
+    font-size: 12px;
+    font-weight: bold;
+    color: #666;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 #amarillas { 
   font-size: 10px; 
   color: #d32f2f; 
-  text-align: right; 
+  text-align: right;
 }
 
 .barraControles { 
   display: grid; 
-  grid-template-columns: repeat(4, 1fr); 
+  grid-template-columns: repeat(5, 1fr);
   gap: 4px; 
   flex: 0 0 auto;
   margin-bottom: 8px; 
@@ -142,7 +177,42 @@ button:disabled {
   background: #555;
 }
 
-/* Zona central de juego */
+.barra-tanteador {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr auto;
+    gap: 6px;
+    margin: 8px 0;
+}
+
+.btn-rival {
+    background: #555;
+    color: white;
+    font-size: 12px;
+    padding: 10px 4px;
+    height: 46px;
+    border: none;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.btn-deshacer {
+    background: #9c27b0;
+    color: white;
+    font-size: 12px;
+    padding: 10px 4px;
+    height: 46px;
+    border: none;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+    min-width: 70px;
+}
+
+.btn-rival:active, .btn-deshacer:active {
+    opacity: 0.8;
+}
+
 .zonaJuego { 
   flex: 1 1 auto;
   overflow-y: auto;
@@ -156,13 +226,12 @@ button:disabled {
 }
 
 h3 { 
-  font-size: 14px; 
-  margin: 10px 0 5px; 
+  font-size: 11px; 
+  margin: 5px 0; 
   color: #666; 
   text-transform: uppercase; 
 }
 
-/* Botones */
 button { 
   border: none; 
   border-radius: 6px; 
@@ -172,10 +241,28 @@ button {
   min-height: 44px; 
 }
 
+/* Botón Iniciar deshabilitado */
+#btnIniciar:disabled {
+    background: #999 !important;
+    color: #ddd;
+    cursor: not-allowed;
+}
+
+/* Botón Iniciar habilitado */
+#btnIniciar:enabled {
+    background: #1b5e20;
+    color: white;
+}
+
 #jugadores button { 
   background: #43a047; 
-  height: 55px; 
+  height: 46px; 
   font-size: 12px; 
+}
+
+#jugadores button:disabled {
+    opacity: 1 !important;
+    background: inherit !important;
 }
 
 .jugadorSeleccionado { 
@@ -186,7 +273,7 @@ button {
 
 #acciones button { 
   background: #0288d1; 
-  height: 50px; 
+  height: 46px; 
   font-size: 12px; 
 }
 
@@ -228,12 +315,11 @@ button {
 
 .stats-tabs {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);  /* 4 columnas: Actual, Historial, Jugadores, Volver */
+    grid-template-columns: repeat(4, 1fr);
     gap: 5px;
     margin-bottom: 5px;
 }
 
-/* Estilo común para TODOS los botones dentro de stats-tabs */
 .stats-tabs button {
     background: #e0e0e0;
     color: #333;
@@ -243,21 +329,19 @@ button {
     border-radius: 6px;
     cursor: pointer;
     padding: 0 10px;
-    height: 30px;           /* Altura fija para todos */
+    height: 30px;
     min-height: 30px;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 100%;            /* Ocupa toda la celda del grid */
+    width: 100%;
 }
 
-/* Botón activo (Actual) */
 .stats-tabs button.tab-active {
     background: #1b5e20;
     color: white;
 }
 
-/* Botón Volver (tiene la misma altura pero diferente color) */
 .stats-tabs .btn-volver {
     background: #757575;
     color: white;
@@ -272,17 +356,24 @@ button {
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-/* Tarjetas de resumen */
+.stats-contenido h3 {
+    text-align: center;
+    width: 100%;
+    margin: 16px 0 8px 0;
+    font-size: 14px;
+    color: #666;
+}
+
 .stats-resumen {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-    margin-bottom: 20px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
+    margin-bottom: 5px;
 }
 
 .stats-card {
     background: #f5f5f5;
-    padding: 15px;
+    padding: 10px;
     border-radius: 10px;
     text-align: center;
 }
@@ -299,37 +390,128 @@ button {
     margin-top: 5px;
 }
 
-/* Tabla de estadísticas */
-.stats-tabla {
-    width: 100%;
-    border-collapse: collapse;
+/* --- TABLA ACTUAL (estadísticas del partido) --- */
+#statsActual {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
-.stats-tabla th {
+#statsActual .stats-tabla {
+    width: 70%;
+    margin: 0 auto;
+    display: block;
+    border-collapse: collapse;
+    overflow-y: auto;
+}
+
+#statsActual .stats-tabla th,
+#statsActual .stats-tabla td {
+    padding: 8px;
+}
+
+#statsActual .stats-tabla th:nth-child(1),
+#statsActual .stats-tabla td:nth-child(1) {
+    text-align: left;
+}
+
+#statsActual .stats-tabla th:nth-child(2),
+#statsActual .stats-tabla td:nth-child(2) {
+    text-align: center;
+}
+
+#statsActual .stats-tabla thead {
+    position: sticky;
+    top: 0;
+    background: #1b5e20;
+    z-index: 10;
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+}
+
+#statsActual .stats-tabla tbody {
+    display: block;
+    overflow-y: auto;
+    max-height: calc(300px - 42px);
+}
+
+#statsActual .stats-tabla tr {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+}
+
+#statsActual .stats-tabla th {
     background: #1b5e20;
     color: white;
-    padding: 8px;
-    font-size: 12px;
     position: sticky;
     top: 0;
 }
 
-.stats-tabla td {
-    padding: 8px;
-    border-bottom: 1px solid #eee;
-    font-size: 13px;
+/* --- TABLA JUGADORES (estadísticas individuales) --- */
+#statsJugadores {
+    overflow-x: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
-.stats-tabla tr:last-child td {
-    border-bottom: none;
+#statsJugadores .stats-tabla {
+    width: auto;
+    min-width: 70%;
+    margin: 0 auto;
+    border-collapse: collapse;
 }
 
-.stats-tabla .destacado {
-    font-weight: bold;
-    color: #1b5e20;
+#statsJugadores .stats-tabla th,
+#statsJugadores .stats-tabla td {
+    padding: 8px 6px;
+    white-space: nowrap;
 }
 
-/* Items del historial */
+#statsJugadores .stats-tabla thead {
+    position: sticky;
+    top: 0;
+    background: #1b5e20;
+    z-index: 10;
+}
+
+#statsJugadores .stats-tabla th {
+    background: #1b5e20;
+    color: white;
+}
+
+/* Columna # centrada */
+#statsJugadores .stats-tabla th:nth-child(1),
+#statsJugadores .stats-tabla td:nth-child(1) {
+    text-align: center;
+}
+
+/* Columna Jugador alineada a la izquierda */
+#statsJugadores .stats-tabla th:nth-child(2),
+#statsJugadores .stats-tabla td:nth-child(2) {
+    text-align: left;
+}
+
+/* Todas las demás columnas numéricas centradas */
+#statsJugadores .stats-tabla th:not(:nth-child(1)):not(:nth-child(2)),
+#statsJugadores .stats-tabla td:not(:nth-child(1)):not(:nth-child(2)) {
+    text-align: center;
+}
+
+/* Scroll para historial */
+#statsHistorial {
+    overflow-y: auto;
+    max-height: 100%;
+}
+
+.historial-lista {
+    max-height: 100%;
+    overflow-y: auto;
+}
+
+/* Historial items */
 .historial-item {
     background: #f9f9f9;
     border-radius: 8px;
@@ -375,17 +557,206 @@ button {
     color: white;
 }
 
-.barraControles { 
-  display: grid; 
-  grid-template-columns: repeat(5, 1fr); /* Cambiado de 4 a 5 */
-  gap: 4px; 
-  flex: 0 0 auto;
-  margin-bottom: 8px; 
+/* --- MODAL PARA DETALLE DE PARTIDO --- */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 16px;
 }
 
-.barraControles button { 
-  font-size: 10px; 
-  padding: 5px 2px; 
-  height: 45px; 
-  background: #555;
+.modal-contenido {
+    background: white;
+    border-radius: 16px;
+    max-width: 400px;
+    width: 90%;
+    max-height: 95%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: #1b5e20;
+    color: white;
+    border-radius: 16px 16px 0 0;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: white;
+    font-size: 16px;
+}
+
+.modal-cerrar {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0;
+    min-height: auto;
+}
+
+.modal-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px;
+    overflow-y: auto;
+}
+
+.modal-body h4 {
+    text-align: center;
+    width: 100%;
+    margin: 16px 0 8px 0;
+    font-size: 14px;
+    color: #666;
+}
+
+.modal-info {
+    background: #f5f5f5;
+    width: 100%;
+    max-width: 290px;
+    border-radius: 12px;
+    padding: 10px;
+    margin-bottom: 5px;
+    text-align: center;
+    font-size: 14px;
+}
+
+.modal-marcador {
+    font-size: 24px;
+    font-weight: bold;
+    margin-top: 8px;
+}
+
+.modal-marcador .propio {
+    color: #1b5e20;
+}
+
+.modal-marcador .rival {
+    color: #d32f2f;
+}
+
+.modal-body .stats-tabla {
+    width: 70%;
+    font-size: 12px;
+    border-collapse: collapse;
+}
+
+.modal-body .stats-tabla th,
+.modal-body .stats-tabla td {
+    padding: 6px 4px;
+}
+
+.modal-body .stats-tabla td:nth-child(2),
+.modal-body .stats-tabla th:nth-child(2) {
+    text-align: center;
+}
+
+.modal-body .stats-tabla thead {
+    background: #1b5e20;
+}
+
+.modal-body .stats-tabla th {
+    background: #1b5e20;
+    color: white;
+}
+
+.modal-body table thead {
+    background: #1b5e20;
+}
+
+.modal-body table th {
+    background: #1b5e20;
+    color: white;
+}
+
+.btn-ver-jugadores {
+    width: 100%;
+    background: #1b5e20;
+    color: white;
+    padding: 10px;
+    margin-top: 10px;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.btn-cerrar-jugadores {
+    width: 100%;
+    background: #757575;
+    color: white;
+    padding: 10px;
+    margin-top: 10px;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+/* Tabla de jugadores dentro del modal */
+.modal-body table {
+    font-size: 12px;
+    border-collapse: collapse;
+}
+
+.modal-body table th,
+.modal-body table td {
+    padding: 6px 4px;
+}
+/* Scroll horizontal para tabla de jugadores en modal */
+.modal-body {
+    overflow-x: auto;
+}
+
+.modal-body table {
+    min-width: 70%;
+}
+
+/* --- RESPONSIVE HORIZONTAL --- */
+@media (orientation: landscape) {
+    #jugadores .grid,
+    #acciones .grid {
+        grid-template-columns: repeat(5, 1fr) !important;
+    }
+    
+    .barra-tanteador {
+        grid-template-columns: repeat(4, 1fr);
+    }
+    
+    #jugadores button, 
+    #acciones button,
+    .btn-rival,
+    .btn-deshacer {
+        height: 44px;
+        font-size: 11px;
+        padding: 4px 2px;
+    }
+    
+    .headerPartido {
+        gap: 6px;
+        padding: 6px 10px;
+    }
+    
+    #cronometro, #puntosPropio, #puntosRival {
+        font-size: 22px;
+    }
+    
+    .equipos {
+        font-size: 11px;
+    }
 }

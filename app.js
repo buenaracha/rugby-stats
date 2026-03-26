@@ -12,22 +12,27 @@ let partidoIniciado=false
 let partidoFinalizado=false
 
 let amarillas=[]
+let rojas = []
+
+let puntosPropio = 0
+let puntosRival = 0
+let historialAcciones = []
 
 let acciones=[
-"Tackle➕",
-"Tackle➖",
+"Tackle ➕",
+"Tackle ➖",
 "Quiebre",
 "🏉 Perdida",
 "🏉 Recuperada",
 "Try",
-"Conversión➕",
-"Conversión➖",
+"Conversión ➕",
+"Conversión ➖",
 "Drop/Penal",
-"Line➕",
-"Line➖",
-"Scrum➕",
-"Scrum➖",
+"Line ➕",
+"Line ➖",
 "Tarjeta 🟨",
+"Scrum ➕",
+"Scrum ➖",
 "Tarjeta 🟥"
 ]
 
@@ -109,44 +114,85 @@ guardarJugadores()
 
 })
 
+document.getElementById("cantidadJugadores").addEventListener("change", function() {
+    actualizarSeleccion()
+})
+
 // Mejora actualizarSeleccion() para manejar correctamente las tarjetas amarillas
 function actualizarSeleccion() {
-  let checks = [...document.querySelectorAll("#tablaJugadores input[type=checkbox]")]
-  let seleccionados = checks.filter(c => c.checked)
-
-  document.getElementById("contador").innerText = `${seleccionados.length} / 15`
-
-  // Primero, habilitar todos los checks
-  checks.forEach(c => {
-    c.disabled = false
-  })
-
-  // Luego, aplicar reglas
-  checks.forEach(c => {
-    let dni = c.dataset.dni
+    let checks = [...document.querySelectorAll("#tablaJugadores input[type=checkbox]")]
+    let seleccionados = checks.filter(c => c.checked)
     
-    // Verificar si está suspendido por amarilla
-    let suspendido = jugadorSuspendido(dni)
+    // Obtener la cantidad máxima de jugadores
+    let cantidadMaxima = parseInt(document.getElementById("cantidadJugadores").value) || 15
     
-    if (suspendido) {
-      c.checked = true
-      c.disabled = true
-      return
-    }
-    
-    // Si ya hay 15 seleccionados y este no está seleccionado, deshabilitarlo
-    if (seleccionados.length >= 15 && !c.checked) {
-      c.disabled = true
-    }
-  })
+    // Actualizar el contador visual
+    document.getElementById("contador").innerText = `${seleccionados.length} / `
 
-  document.getElementById("btnIniciar").disabled = seleccionados.length !== 15
+    // Primero, habilitar todos los checks
+    checks.forEach(c => {
+        c.disabled = false
+    })
+
+    // Luego, aplicar reglas
+    checks.forEach(c => {
+        let dni = c.dataset.dni
+        
+        // Verificar si está suspendido
+        let suspendido = jugadorSuspendido(dni)
+        
+        if (suspendido) {
+            c.checked = true
+            c.disabled = true
+            return
+        }
+        
+        // Si ya alcanzamos la cantidad máxima y este no está seleccionado, deshabilitarlo
+        if (seleccionados.length >= cantidadMaxima && !c.checked) {
+            c.disabled = true
+        }
+    })
+
+    // Habilitar botón Iniciar solo si tenemos la cantidad exacta
+    document.getElementById("btnIniciar").disabled = seleccionados.length !== cantidadMaxima
+}
+
+function actualizarColoresBotones() {
+    if (document.getElementById("pantallaPartido").style.display !== "block") return
+    
+    rojas.forEach(r => {
+        let boton = document.querySelector(`#jugadores button[data-dni='${r.dni}']`)
+        if(boton){
+            boton.style.setProperty('background', '#d32f2f', 'important')
+            boton.style.setProperty('color', 'white', 'important')
+            boton.disabled = true
+        }
+    })
+    
+    amarillas.forEach(a => {
+        let restante = a.regreso - segundos
+        let boton = document.querySelector(`#jugadores button[data-dni='${a.dni}']`)
+        
+        if (boton && !rojas.some(r => r.dni === a.dni)) {
+            if (restante <= 0) {
+                boton.style.setProperty('background', '#43a047', 'important')
+                boton.style.setProperty('color', 'white', 'important')
+                boton.disabled = false
+            } else {
+                boton.style.setProperty('background', 'gold', 'important')
+                boton.style.setProperty('color', 'black', 'important')
+                boton.disabled = true
+            }
+        }
+    })
 }
 
 // Modifica iniciarPartido() para mantener la coherencia
 function iniciarPartido() {
     const nuevoEquipo = document.getElementById("equipo").value
     const nuevoRival = document.getElementById("rival").value
+    
+    const cantidadJugadores = parseInt(document.getElementById("cantidadJugadores").value) || 15
     
     if (!partidoIniciado) {
         equipoActual = nuevoEquipo
@@ -156,12 +202,12 @@ function iniciarPartido() {
         const fecha = ahora.toISOString().slice(0, 10)
         const hora = ahora.toISOString().slice(11, 19).replace(/:/g, '-')
         
-        // Guardar en la estructura completa
         partidoActual = {
             id: `${fecha}_${hora}_${equipoActual}_vs_${rivalActual}`,
             fechaInicio: ahora.toISOString(),
             equipo: equipoActual,
             rival: rivalActual,
+            cantidadJugadores: cantidadJugadores,
             eventos: []
         }
         
@@ -169,24 +215,42 @@ function iniciarPartido() {
         
         console.log('Nuevo partido creado:', partidoActual)
     } else {
+        // Si ya hay partido iniciado y cambiaron los equipos
         if (nuevoEquipo !== equipoActual || nuevoRival !== rivalActual) {
             equipoActual = nuevoEquipo
             rivalActual = nuevoRival
             
             const partes = partidoID.split('_')
             const fechaHora = partes.slice(0, 2).join('_')
-            partidoID = `${fechaHora}_${equipoActual}_vs_${rivalActual}`
+            const nuevoID = `${fechaHora}_${equipoActual}_vs_${rivalActual}`
             
-            // Actualizar la estructura
-            partidoActual.id = partidoID
-            partidoActual.equipo = equipoActual
-            partidoActual.rival = rivalActual
+            // ACTUALIZAR TODOS LOS EVENTOS EXISTENTES CON EL NUEVO ID
+            eventos.forEach(evento => {
+                if (evento.partido === partidoID) {
+                    evento.partido = nuevoID
+                }
+            })
             
-            console.log('Partido actualizado:', partidoID)
+            // Actualizar también eventos en partidoActual
+            if (partidoActual && partidoActual.eventos) {
+                partidoActual.eventos.forEach(evento => {
+                    evento.partido = nuevoID
+                })
+                partidoActual.id = nuevoID
+                partidoActual.equipo = equipoActual
+                partidoActual.rival = rivalActual
+            }
+            
+            partidoID = nuevoID
+            
+            // GUARDAR LOS EVENTOS ACTUALIZADOS EN LOCALSTORAGE
+            guardarEventos()
+            
+            console.log('Partido actualizado. Eventos migrados y guardados')
         }
     }
 
-    // Actualizar titulares...
+    // Resto del código...
     titulares = []
     
     document.querySelectorAll("#tablaJugadores .filaJugador").forEach(f => {
@@ -218,29 +282,22 @@ function iniciarPartido() {
 }
 
 function crearJugadores(){
+    let cont = document.getElementById("jugadores")
+    cont.innerHTML = ""
 
-let cont=document.getElementById("jugadores")
-cont.innerHTML=""
+    titulares.forEach(j => {
+        let label = modoJugadores === "camiseta" ? (j.numero || j.apodo) : j.apodo
 
-titulares.forEach(j=>{
+        let b = document.createElement("button")
+        b.dataset.dni = j.dni
+        b.innerText = label
+        b.onclick = () => seleccionarJugador(j, b)
 
-let label=
-modoJugadores==="camiseta"
-?(j.numero||j.apodo)
-:j.apodo
-
-let b=document.createElement("button")
-
-b.dataset.dni=j.dni
-
-b.innerText=label
-
-b.onclick=()=>seleccionarJugador(j,b)
-
-cont.appendChild(b)
-
-})
-
+        cont.appendChild(b)
+    })
+    
+    // Aplicar colores después de crear los botones
+    actualizarColoresBotones()
 }
 
 function toggleModo(){
@@ -273,9 +330,15 @@ jugadorSeleccionado=j
 }
 
 function jugadorSuspendido(dni){
-
-return amarillas.some(a=>a.dni==dni && a.regreso>segundos)
-
+    // Convertir a string para comparación
+    const dniStr = String(dni)
+    
+    // Verificar rojas
+    if (rojas.some(r => String(r.dni) === dniStr)) {
+        return true
+    }
+    // Verificar amarillas activas
+    return amarillas.some(a => String(a.dni) === dniStr && a.regreso > segundos)
 }
 
 function crearAcciones(){
@@ -299,10 +362,134 @@ cont.appendChild(b)
 }
 
 function registrarEvento(accion) {
-    if(!jugadorSeleccionado) return
+    // Verificar si es una acción de equipo (no requiere jugador)
+    const accionesEquipo = ["Line ➕", "Line ➖", "Scrum ➕", "Scrum ➖"]
+    const esAccionEquipo = accionesEquipo.includes(accion)
+    
+    // Si NO es acción de equipo, requiere jugador seleccionado
+    if (!esAccionEquipo && !jugadorSeleccionado) return
 
-    if(jugadorSuspendido(jugadorSeleccionado.dni)){
-        alert("Jugador con tarjeta amarilla")
+    // Si es acción de jugador, verificar suspensión
+    if (!esAccionEquipo && jugadorSuspendido(jugadorSeleccionado.dni)) {
+        alert("Jugador con tarjeta amarilla o roja")
+        return
+    }
+
+    let tiempo = document.getElementById("cronometro").innerText
+
+    // ===== SUMAR PUNTOS PARA EL EQUIPO PROPIO =====
+    let puntosASumar = 0
+    if (accion === 'Try') puntosASumar = 5
+    else if (accion === 'Conversión ➕') puntosASumar = 2
+    else if (accion === 'Drop/Penal') puntosASumar = 3
+    
+    if (puntosASumar > 0) {
+        puntosPropio += puntosASumar
+        document.getElementById('puntosPropio').innerText = puntosPropio
+        
+        // Guardar en historial para deshacer
+        historialAcciones.push({
+            tipo: 'puntoPropio',
+            accion: accion,
+            puntos: puntosASumar,
+            timestamp: Date.now()
+        })
+    }
+
+    let evento = {
+        partido: partidoID,
+        dni: esAccionEquipo ? null : jugadorSeleccionado.dni,
+        accion: accion,
+        tiempo: tiempo,
+        timestamp: new Date().toISOString(),
+        esEquipo: esAccionEquipo
+    }
+
+    eventos.push(evento)
+    if (partidoActual && partidoActual.eventos) {
+        partidoActual.eventos.push(evento)
+    }
+    
+    guardarEventos()
+    
+    // Guardar en historial para deshacer
+    if (!esAccionEquipo) {
+        historialAcciones.push({
+            tipo: 'evento',
+            dni: jugadorSeleccionado.dni,
+            accion: accion,
+            tiempo: tiempo,
+            eventoCompleto: evento
+        })
+    } else {
+        historialAcciones.push({
+            tipo: 'eventoEquipo',
+            accion: accion,
+            tiempo: tiempo,
+            eventoCompleto: evento
+        })
+    }
+
+    // Manejo de tarjetas
+    if (!esAccionEquipo && accion.includes("🟨")) {
+        let regreso = segundos + (15 * 60)
+        amarillas.push({
+            dni: jugadorSeleccionado.dni,
+            apodo: jugadorSeleccionado.apodo,
+            regreso: regreso
+        })
+        historialAcciones.push({
+            tipo: 'tarjeta',
+            subtipo: 'amarilla',
+            dni: jugadorSeleccionado.dni,
+            apodo: jugadorSeleccionado.apodo,
+            regreso: regreso
+        })
+    }
+    
+    if (!esAccionEquipo && accion.includes("🟥")) {
+        amarillas = amarillas.filter(a => a.dni !== jugadorSeleccionado.dni)
+        rojas.push({
+            dni: jugadorSeleccionado.dni,
+            apodo: jugadorSeleccionado.apodo
+        })
+        historialAcciones.push({
+            tipo: 'tarjeta',
+            subtipo: 'roja',
+            dni: jugadorSeleccionado.dni,
+            apodo: jugadorSeleccionado.apodo
+        })
+    }
+
+    // Mensaje en pantalla
+    if (esAccionEquipo) {
+        document.getElementById("ultima").innerText = "EQUIPO: " + accion + " " + tiempo
+    } else {
+        let mensaje = jugadorSeleccionado.apodo + " " + accion + " " + tiempo
+        if (puntosASumar > 0) mensaje += " (+" + puntosASumar + " pts)"
+        document.getElementById("ultima").innerText = mensaje
+    }
+
+    // Limpiar selección solo si fue acción de jugador
+    if (!esAccionEquipo) {
+        jugadorSeleccionado = null
+        document.querySelectorAll("#jugadores button")
+            .forEach(b => b.classList.remove("jugadorSeleccionado"))
+    }
+    
+    actualizarColoresBotones()
+}
+function registrarEventoOri(accion) {
+    // Verificar si es una acción de equipo (no requiere jugador)
+    const accionesEquipo = ["Line ➕", "Line ➖", "Scrum ➕", "Scrum ➖"]
+    const esAccionEquipo = accionesEquipo.includes(accion)
+    
+    // Si NO es acción de equipo, requiere jugador seleccionado
+    if (!esAccionEquipo && !jugadorSeleccionado) return
+
+    // Si es acción de jugador, verificar suspensión
+    if (!esAccionEquipo && jugadorSuspendido(jugadorSeleccionado.dni)) {
+        alert("Jugador con tarjeta amarilla o roja")
         return
     }
 
@@ -310,35 +497,85 @@ function registrarEvento(accion) {
 
     let evento = {
         partido: partidoID,
-        dni: jugadorSeleccionado.dni,
+        dni: esAccionEquipo ? null : jugadorSeleccionado.dni,
         accion: accion,
         tiempo: tiempo,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        esEquipo: esAccionEquipo
     }
 
-    // Guardar en ambos arrays
     eventos.push(evento)
     if (partidoActual && partidoActual.eventos) {
         partidoActual.eventos.push(evento)
     }
     
     guardarEventos()
+    
+    // Guardar en historial para deshacer (solo si hay acción de jugador o equipo)
+    if (!esAccionEquipo) {
+        historialAcciones.push({
+            tipo: 'evento',
+            dni: jugadorSeleccionado.dni,
+            accion: accion,
+            tiempo: tiempo,
+            eventoCompleto: evento
+        })
+    } else {
+        historialAcciones.push({
+            tipo: 'eventoEquipo',
+            accion: accion,
+            tiempo: tiempo,
+            eventoCompleto: evento
+        })
+    }
 
-    if(accion.includes("🟨")){
+    // Manejo de tarjetas (solo para acciones de jugador)
+    if (!esAccionEquipo && accion.includes("🟨")) {
         let regreso = segundos + (15 * 60)
         amarillas.push({
             dni: jugadorSeleccionado.dni,
             apodo: jugadorSeleccionado.apodo,
             regreso: regreso
         })
+        historialAcciones.push({
+            tipo: 'tarjeta',
+            subtipo: 'amarilla',
+            dni: jugadorSeleccionado.dni,
+            apodo: jugadorSeleccionado.apodo,
+            regreso: regreso
+        })
+    }
+    
+    if (!esAccionEquipo && accion.includes("🟥")) {
+        amarillas = amarillas.filter(a => a.dni !== jugadorSeleccionado.dni)
+        rojas.push({
+            dni: jugadorSeleccionado.dni,
+            apodo: jugadorSeleccionado.apodo
+        })
+        historialAcciones.push({
+            tipo: 'tarjeta',
+            subtipo: 'roja',
+            dni: jugadorSeleccionado.dni,
+            apodo: jugadorSeleccionado.apodo
+        })
     }
 
-    document.getElementById("ultima").innerText = 
-        jugadorSeleccionado.apodo + " " + accion + " " + tiempo
+    // Mensaje en pantalla
+    if (esAccionEquipo) {
+        document.getElementById("ultima").innerText = "EQUIPO: " + accion + " " + tiempo
+    } else {
+        document.getElementById("ultima").innerText = 
+            jugadorSeleccionado.apodo + " " + accion + " " + tiempo
+    }
 
-    jugadorSeleccionado = null
-    document.querySelectorAll("#jugadores button")
-        .forEach(b => b.classList.remove("jugadorSeleccionado"))
+    // Limpiar selección solo si fue acción de jugador
+    if (!esAccionEquipo) {
+        jugadorSeleccionado = null
+        document.querySelectorAll("#jugadores button")
+            .forEach(b => b.classList.remove("jugadorSeleccionado"))
+    }
+    
+    actualizarColoresBotones()
 }
 
 function iniciarCrono() {
@@ -419,17 +656,21 @@ function modoCambios() {
 }
 
 function borrarSeleccion(){
+    if(segundos > 0 && !partidoFinalizado){
+        alert("No se puede borrar partido iniciado")
+        return
+    }
 
-if(segundos>0 && !partidoFinalizado){
-alert("No se puede borrar partido iniciado")
-return
-}
+    document.querySelectorAll("#tablaJugadores input[type=checkbox]")
+        .forEach(c => c.checked = false)
 
-document.querySelectorAll("#tablaJugadores input[type=checkbox]")
-.forEach(c=>c.checked=false)
-
-actualizarSeleccion()
-
+    actualizarSeleccion()
+    
+    // Opcional: también limpiar rojas si estás en preparación sin partido
+    if (!partidoIniciado) {
+        rojas = []
+        amarillas = []
+    }
 }
 
 function registrarCambio(sale,entra){
@@ -455,53 +696,174 @@ guardarEventos()
 }
 
 function actualizarAmarillas(){
+    let cont = document.getElementById("amarillas")
+    if(!cont) return
 
-let cont=document.getElementById("amarillas")
+    cont.innerHTML = ""
 
-if(!cont) return
+    // Marcar jugadores con roja (fondo rojo, deshabilitados)
+    rojas.forEach(r => {
+        let boton = document.querySelector(`#jugadores button[data-dni='${r.dni}']`)
+        if(boton){
+            boton.style.background = "#d32f2f"  // Rojo
+            boton.disabled = true
+        }
+    })
 
-cont.innerHTML=""
+    // Manejo de amarillas (igual que antes)
+    amarillas.forEach(a => {
+        let restante = a.regreso - segundos
+        let boton = document.querySelector(`#jugadores button[data-dni='${a.dni}']`)
 
-amarillas.forEach(a=>{
+        if(restante <= 0){
+            if(boton && !rojas.some(r => r.dni === a.dni)){  // Si no tiene roja
+                boton.style.background = ""
+                boton.disabled = false
+            }
+            let d = document.createElement("div")
+            d.innerText = "🟨 " + a.apodo + " puede volver"
+            cont.appendChild(d)
+            return
+        }
 
-let restante=a.regreso-segundos
+        if(boton && !rojas.some(r => r.dni === a.dni)){  // Si no tiene roja
+            boton.style.background = "gold"
+            boton.disabled = true
+        }
 
-let boton=document.querySelector(`#jugadores button[data-dni='${a.dni}']`)
+        let m = Math.floor(restante / 60)
+        let s = restante % 60
+        let mm = String(m).padStart(2, "0")
+        let ss = String(s).padStart(2, "0")
 
-if(restante<=0){
+        let d = document.createElement("div")
+        d.innerText = `🟨 ${a.apodo} ${mm}:${ss}`
+        cont.appendChild(d)
+    })
 
-if(boton){
-boton.style.background=""
-boton.disabled=false
+    // Actualizar colores de los botones
+    actualizarColoresBotones()
 }
 
-let d=document.createElement("div")
-d.innerText="🟨 "+a.apodo+" puede volver"
-
-cont.appendChild(d)
-
-return
+function sumarPuntoRival(tipo) {
+    let puntos = 0
+    if (tipo === 'try') puntos = 5
+    else if (tipo === 'conversion') puntos = 2
+    else if (tipo === 'drop') puntos = 3
+    
+    historialAcciones.push({
+        tipo: 'punto',
+        equipo: 'rival',
+        accion: tipo,
+        puntos: puntos,
+        timestamp: Date.now()
+    })
+    
+    puntosRival += puntos
+    document.getElementById('puntosRival').innerText = puntosRival
+    
+    let evento = {
+        partido: partidoID,
+        dni: null,
+        accion: `RIVAL: ${tipo.toUpperCase()} +${puntos}`,
+        tiempo: document.getElementById('cronometro').innerText,
+        timestamp: new Date().toISOString()
+    }
+    eventos.push(evento)
+    if (partidoActual && partidoActual.eventos) {
+        partidoActual.eventos.push(evento)
+    }
+    guardarEventos()
+    
+    document.getElementById("ultima").innerText = `RIVAL: ${tipo.toUpperCase()} +${puntos}`
 }
 
-if(boton){
-boton.style.background="gold"
-boton.disabled=true
-}
-
-let m=Math.floor(restante/60)
-let s=restante%60
-
-let mm=String(m).padStart(2,"0")
-let ss=String(s).padStart(2,"0")
-
-let d=document.createElement("div")
-
-d.innerText=`🟨 ${a.apodo} ${mm}:${ss}`
-
-cont.appendChild(d)
-
-})
-
+function deshacerUltimaAccion() {
+    if (historialAcciones.length === 0) {
+        alert("No hay acciones para deshacer")
+        return
+    }
+    
+    const ultima = historialAcciones.pop()
+    
+    if (ultima.tipo === 'punto') {
+        // Deshacer punto del rival
+        if (ultima.equipo === 'rival') {
+            puntosRival -= ultima.puntos
+            document.getElementById('puntosRival').innerText = puntosRival
+            document.getElementById("ultima").innerText = `Deshecho: Rival -${ultima.puntos} puntos`
+            
+            for (let i = eventos.length - 1; i >= 0; i--) {
+                if (eventos[i].accion && eventos[i].accion.includes('RIVAL')) {
+                    eventos.splice(i, 1)
+                    break
+                }
+            }
+            guardarEventos()
+        }
+    }
+    else if (ultima.tipo === 'puntoPropio') {
+        // Deshacer punto del equipo propio
+        puntosPropio -= ultima.puntos
+        document.getElementById('puntosPropio').innerText = puntosPropio
+        document.getElementById("ultima").innerText = `Deshecho: ${ultima.accion} -${ultima.puntos} pts`
+        
+        // Eliminar el último evento de punto propio
+        for (let i = eventos.length - 1; i >= 0; i--) {
+            if (eventos[i].accion === ultima.accion && 
+                eventos[i].dni !== null &&
+                !eventos[i].accion.includes('RIVAL')) {
+                eventos.splice(i, 1)
+                break
+            }
+        }
+        guardarEventos()
+    }
+    else if (ultima.tipo === 'evento') {
+        const index = eventos.findIndex(e => 
+            e.dni === ultima.dni && 
+            e.accion === ultima.accion && 
+            e.tiempo === ultima.tiempo
+        )
+        if (index !== -1) {
+            eventos.splice(index, 1)
+            guardarEventos()
+            document.getElementById("ultima").innerText = `Deshecho: ${ultima.accion} de ${ultima.dni}`
+        }
+    }
+    else if (ultima.tipo === 'eventoEquipo') {
+        const index = eventos.findIndex(e => 
+            e.accion === ultima.accion && 
+            e.tiempo === ultima.tiempo &&
+            e.esEquipo === true
+        )
+        if (index !== -1) {
+            eventos.splice(index, 1)
+            guardarEventos()
+            document.getElementById("ultima").innerText = `Deshecho: EQUIPO ${ultima.accion}`
+        }
+    }
+    else if (ultima.tipo === 'tarjeta') {
+        if (ultima.subtipo === 'amarilla') {
+            amarillas = amarillas.filter(a => a.dni !== ultima.dni)
+            document.getElementById("ultima").innerText = `Deshecho: Tarjeta amarilla para ${ultima.apodo}`
+        } else if (ultima.subtipo === 'roja') {
+            rojas = rojas.filter(r => r.dni !== ultima.dni)
+            document.getElementById("ultima").innerText = `Deshecho: Tarjeta roja para ${ultima.apodo}`
+        }
+        
+        for (let i = eventos.length - 1; i >= 0; i--) {
+            if (eventos[i].accion && eventos[i].accion.includes(ultima.subtipo === 'amarilla' ? '🟨' : '🟥') && 
+                eventos[i].dni === ultima.dni) {
+                eventos.splice(i, 1)
+                break
+            }
+        }
+        guardarEventos()
+        actualizarColoresBotones()
+    }
+    
+    actualizarAmarillas()
 }
 
 // ===== VARIABLES GLOBALES PARA ESTADÍSTICAS =====
@@ -636,7 +998,6 @@ function sincronizarEstadoPartido() {
 
 // ===== ESTADÍSTICAS DEL PARTIDO ACTUAL =====
 function cargarEstadisticasActual() {
-    // Verificar si hay partido activo
     if (!partidoIniciado || !partidoID) {
         document.getElementById('statsActual').innerHTML = `
             <div style="text-align: center; padding: 40px; color: #666;">
@@ -647,7 +1008,6 @@ function cargarEstadisticasActual() {
         return
     }
     
-    // Si hay partido pero no hay titulares (caso raro)
     if (!titulares || titulares.length === 0) {
         document.getElementById('statsActual').innerHTML = `
             <div style="text-align: center; padding: 40px; color: #666;">
@@ -658,35 +1018,37 @@ function cargarEstadisticasActual() {
         return
     }
     
-    // Filtrar eventos del partido actual
     const eventosPartido = eventos.filter(e => e.partido === partidoID)
     
-    console.log('Debug - Estadísticas:', {
-        partidoIniciado,
-        partidoID,
-        titulares: titulares.length,
-        eventos: eventosPartido.length
-    })
-    
-    // Calcular estadísticas
+    // Calcular estadísticas con NUEVAS ACCIONES
     const stats = {
+        // Puntos
         tries: eventosPartido.filter(e => e.accion === 'Try').length,
-        conversionesOK: eventosPartido.filter(e => e.accion === 'Conversión➕').length,
-        conversionesMal: eventosPartido.filter(e => e.accion === 'Conversión➖').length,
-        drops: eventosPartido.filter(e => e.accion === 'Drop').length,
-        tacklesPos: eventosPartido.filter(e => e.accion === 'Tackle➕').length,
-        tacklesNeg: eventosPartido.filter(e => e.accion === 'Tackle➖').length,
+        conversionesOK: eventosPartido.filter(e => e.accion === 'Conversión ➕').length,
+        conversionesMal: eventosPartido.filter(e => e.accion === 'Conversión ➖').length,
+        drops: eventosPartido.filter(e => e.accion === 'Drop/Penal').length,
+        
+        // Tackles y quiebres
+        tacklesPos: eventosPartido.filter(e => e.accion === 'Tackle ➕').length,
+        tacklesNeg: eventosPartido.filter(e => e.accion === 'Tackle ➖').length,
         quiebres: eventosPartido.filter(e => e.accion === 'Quiebre').length,
+        
+        // Pelota
         perdidas: eventosPartido.filter(e => e.accion === '🏉 Perdida').length,
         recuperadas: eventosPartido.filter(e => e.accion === '🏉 Recuperada').length,
+        
+        // NUEVAS ACCIONES
+        linesPos: eventosPartido.filter(e => e.accion === 'Line ➕').length,
+        linesNeg: eventosPartido.filter(e => e.accion === 'Line ➖').length,
+        scrumsPos: eventosPartido.filter(e => e.accion === 'Scrum ➕').length,
+        scrumsNeg: eventosPartido.filter(e => e.accion === 'Scrum ➖').length,
+        
+        // Tarjetas
         amarillas: eventosPartido.filter(e => e.accion === 'Tarjeta 🟨').length,
         rojas: eventosPartido.filter(e => e.accion === 'Tarjeta 🟥').length
     }
     
-    // Calcular puntos
     const puntos = (stats.tries * 5) + (stats.conversionesOK * 2) + (stats.drops * 3)
-    
-    // Mostrar información del partido
     const tiempoActual = document.getElementById('cronometro').innerText
     
     let html = `
@@ -701,12 +1063,16 @@ function cargarEstadisticasActual() {
         
         <div class="stats-resumen">
             <div class="stats-card">
-                <div class="numero">${puntos}</div>
-                <div class="etiqueta">Puntos</div>
-            </div>
-            <div class="stats-card">
                 <div class="numero">${stats.tries}</div>
                 <div class="etiqueta">Tries</div>
+            </div>
+            <div class="stats-card">
+                <div class="numero">${stats.conversionesOK}</div>
+                <div class="etiqueta">Conversiones</div>
+            </div>
+            <div class="stats-card">
+                <div class="numero">${stats.drops}</div>
+                <div class="etiqueta">Drops/Penal</div>
             </div>
             <div class="stats-card">
                 <div class="numero">${stats.tacklesPos}</div>
@@ -716,26 +1082,31 @@ function cargarEstadisticasActual() {
                 <div class="numero">${stats.quiebres}</div>
                 <div class="etiqueta">Quiebres</div>
             </div>
+            <div class="stats-card">
+                <div class="numero">${stats.scrumsPos}</div>
+                <div class="etiqueta">Scrums +</div>
+            </div>
         </div>
         
         <h3>Acciones del partido</h3>
         <table class="stats-tabla">
             <thead>
-                <tr>
-                    <th>Acción</th>
-                    <th>Cantidad</th>
-                </tr>
+                <tr><th>Acción</th><th>Cantidad</th></tr>
             </thead>
             <tbody>
                 <tr><td>Tries</td><td class="destacado">${stats.tries}</td></tr>
                 <tr><td>Conversiones +</td><td>${stats.conversionesOK}</td></tr>
                 <tr><td>Conversiones -</td><td>${stats.conversionesMal}</td></tr>
-                <tr><td>Drops</td><td>${stats.drops}</td></tr>
+                <tr><td>Drops/Penal</td><td>${stats.drops}</td></tr>
                 <tr><td>Tackles +</td><td>${stats.tacklesPos}</td></tr>
                 <tr><td>Tackles -</td><td>${stats.tacklesNeg}</td></tr>
                 <tr><td>Quiebres</td><td>${stats.quiebres}</td></tr>
                 <tr><td>Pérdidas</td><td>${stats.perdidas}</td></tr>
                 <tr><td>Recuperadas</td><td>${stats.recuperadas}</td></tr>
+                <tr><td>Line +</td><td>${stats.linesPos}</td></tr>
+                <tr><td>Line -</td><td>${stats.linesNeg}</td></tr>
+                <tr><td>Scrum +</td><td>${stats.scrumsPos}</td></tr>
+                <tr><td>Scrum -</td><td>${stats.scrumsNeg}</td></tr>
                 <tr><td>Tarjetas Amarillas</td><td style="color: #d32f2f;">${stats.amarillas}</td></tr>
                 <tr><td>Tarjetas Rojas</td><td style="color: #d32f2f;">${stats.rojas}</td></tr>
             </tbody>
@@ -762,14 +1133,14 @@ function cargarHistorial() {
         return
     }
     
-    // Ordenar del más reciente al más antiguo (por fecha de inicio)
+    // Ordenar del más reciente al más antiguo
     const historialOrdenado = [...historialPartidos].sort((a, b) => 
         new Date(b.fecha) - new Date(a.fecha)
     )
     
     let html = '<div class="historial-lista">'
     
-    historialOrdenado.forEach((partido, index) => {
+    historialOrdenado.forEach((partido) => {
         const puntos = (partido.tries * 5) + (partido.conversionesOK * 2) + (partido.drops * 3)
         
         html += `
@@ -779,8 +1150,8 @@ function cargarHistorial() {
                 <div class="resultado">${puntos} puntos (${partido.tries} tries)</div>
                 <div class="duracion">⏱️ ${partido.duracionLegible || Math.floor(partido.duracion / 60) + ':' + String(partido.duracion % 60).padStart(2, '0')}</div>
                 <div class="acciones">
-                    <button class="ver-detalle" onclick="verDetallePartido(${index})">Ver detalle</button>
-                    <button onclick="exportarPartido(${index})">Exportar</button>
+                    <button class="ver-detalle" onclick="verDetallePartido('${partido.id}')">Ver detalle</button>
+                    <button onclick="exportarPartido('${partido.id}')">Exportar</button>
                 </div>
             </div>
         `
@@ -803,7 +1174,6 @@ function cargarEstadisticasJugadores() {
     
     const eventosPartido = eventos.filter(e => e.partido === partidoID)
     
-    // Crear objeto de estadísticas por jugador
     const statsJugadores = {}
     
     titulares.forEach(j => {
@@ -819,40 +1189,51 @@ function cargarEstadisticasJugadores() {
             drops: 0,
             conversionesOK: 0,
             conversionesMal: 0,
-            amarillas: 0
+            amarillas: 0,
+            rojas: 0
         }
     })
     
-    // Procesar eventos
     eventosPartido.forEach(e => {
         if (statsJugadores[e.dni]) {
             if (e.accion === 'Try') statsJugadores[e.dni].tries++
-            else if (e.accion === 'Tackle➕') statsJugadores[e.dni].tacklesPos++
-            else if (e.accion === 'Tackle➖') statsJugadores[e.dni].tacklesNeg++
+            else if (e.accion === 'Tackle ➕') statsJugadores[e.dni].tacklesPos++
+            else if (e.accion === 'Tackle ➖') statsJugadores[e.dni].tacklesNeg++
             else if (e.accion === 'Quiebre') statsJugadores[e.dni].quiebres++
             else if (e.accion === '🏉 Perdida') statsJugadores[e.dni].perdidas++
             else if (e.accion === '🏉 Recuperada') statsJugadores[e.dni].recuperadas++
-            else if (e.accion === 'Drop') statsJugadores[e.dni].drops++
-            else if (e.accion === 'Conversión➕') statsJugadores[e.dni].conversionesOK++
-            else if (e.accion === 'Conversión➖') statsJugadores[e.dni].conversionesMal++
+            else if (e.accion === 'Drop/Penal') statsJugadores[e.dni].drops++
+            else if (e.accion === 'Conversión ➕') statsJugadores[e.dni].conversionesOK++
+            else if (e.accion === 'Conversión ➖') statsJugadores[e.dni].conversionesMal++
             else if (e.accion === 'Tarjeta 🟨') statsJugadores[e.dni].amarillas++
+            else if (e.accion === 'Tarjeta 🟥') statsJugadores[e.dni].rojas++
         }
     })
     
-    // Ordenar por tries (los que más tries primero)
     const jugadoresOrdenados = Object.values(statsJugadores)
         .sort((a, b) => b.tries - a.tries)
     
     let html = `
-        <table class="stats-tabla">
-            <tr>
-                <th>#</th>
-                <th>Jugador</th>
-                <th>T</th>
-                <th>Tk+</th>
-                <th>Q</th>
-                <th>🟨</th>
-            </tr>
+        <div style="max-height: 500px; overflow-y: auto;">
+            <table class="stats-tabla">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Jugador</th>
+                        <th>Try</th>
+                        <th>Tk+</th>
+                        <th>Tk-</th>
+                        <th>Q</th>
+                        <th>PP</th>
+                        <th>PR</th>
+                        <th>D/P</th>
+                        <th>Cv+</th>
+                        <th>Cv-</th>
+                        <th>🟨</th>
+                        <th>🟥</th>
+                    </tr>
+                </thead>
+                <tbody>
     `
     
     jugadoresOrdenados.forEach(j => {
@@ -862,13 +1243,25 @@ function cargarEstadisticasJugadores() {
                 <td>${j.nombre}</td>
                 <td class="destacado">${j.tries}</td>
                 <td>${j.tacklesPos}</td>
+                <td>${j.tacklesNeg}</td>
                 <td>${j.quiebres}</td>
+                <td>${j.perdidas}</td>
+                <td>${j.recuperadas}</td>
+                <td>${j.drops}</td>
+                <td>${j.conversionesOK}</td>
+                <td>${j.conversionesMal}</td>
                 <td style="color: ${j.amarillas > 0 ? '#d32f2f' : 'inherit'}">${j.amarillas}</td>
+                <td style="color: ${j.rojas > 0 ? '#d32f2f' : 'inherit'}">${j.rojas}</td>
             </tr>
         `
     })
     
-    html += '</table>'
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `
+    
     document.getElementById('statsJugadores').innerHTML = html
 }
 
@@ -886,9 +1279,9 @@ function guardarPartidoEnHistorial() {
     
     const stats = {
         tries: eventosPartido.filter(e => e.accion === 'Try').length,
-        conversionesOK: eventosPartido.filter(e => e.accion === 'Conversión➕').length,
+        conversionesOK: eventosPartido.filter(e => e.accion === 'Conversión ➕').length,
         drops: eventosPartido.filter(e => e.accion === 'Drop').length,
-        tacklesPos: eventosPartido.filter(e => e.accion === 'Tackle➕').length
+        tacklesPos: eventosPartido.filter(e => e.accion === 'Tackle ➕').length
     }
     
     const partidoHistorial = {
@@ -916,43 +1309,259 @@ function guardarPartidoEnHistorial() {
 }
 
 // ===== VER DETALLE DE PARTIDO HISTÓRICO =====
-function verDetallePartido(index) {
-    const partido = historialPartidos[index]
-    alert(`Detalle de ${partido.equipo} vs ${partido.rival}\n\n` +
-          `Tries: ${partido.tries}\n` +
-          `Conversiones: ${partido.conversionesOK || 0}\n` +
-          `Drops: ${partido.drops || 0}\n` +
-          `Tackles+: ${partido.tacklesPos || 0}`)
+function verDetallePartido(partidoId) {
+    if (!partidoId) {
+        console.error('partidoId es undefined')
+        alert('Error: No se pudo identificar el partido')
+        return
+    }
+    
+    const partido = historialPartidos.find(p => p.id === partidoId)
+    if (!partido) {
+        console.error('Partido no encontrado con ID:', partidoId)
+        alert("No se encontró el partido")
+        return
+    }
+    
+    const eventosPartido = partido.eventos || []
+    
+    const stats = {
+        tries: eventosPartido.filter(e => e.accion === 'Try').length,
+        conversionesOK: eventosPartido.filter(e => e.accion === 'Conversión ➕').length,
+        conversionesMal: eventosPartido.filter(e => e.accion === 'Conversión ➖').length,
+        drops: eventosPartido.filter(e => e.accion === 'Drop/Penal').length,
+        tacklesPos: eventosPartido.filter(e => e.accion === 'Tackle ➕').length,
+        tacklesNeg: eventosPartido.filter(e => e.accion === 'Tackle ➖').length,
+        quiebres: eventosPartido.filter(e => e.accion === 'Quiebre').length,
+        perdidas: eventosPartido.filter(e => e.accion === '🏉 Perdida').length,
+        recuperadas: eventosPartido.filter(e => e.accion === '🏉 Recuperada').length,
+        linesPos: eventosPartido.filter(e => e.accion === 'Line ➕').length,
+        linesNeg: eventosPartido.filter(e => e.accion === 'Line ➖').length,
+        scrumsPos: eventosPartido.filter(e => e.accion === 'Scrum ➕').length,
+        scrumsNeg: eventosPartido.filter(e => e.accion === 'Scrum ➖').length,
+        amarillas: eventosPartido.filter(e => e.accion === 'Tarjeta 🟨').length,
+        rojas: eventosPartido.filter(e => e.accion === 'Tarjeta 🟥').length
+    }
+    
+    const puntosPropio = partido.puntosPropio || 0
+    const puntosRival = partido.puntosRival || 0
+    
+    // Generar filas de la tabla
+    let filasTabla = `
+        <tr><td>Tries</td><td class="destacado">${stats.tries}</td></tr>
+        <tr><td>Conversiones +</td><td>${stats.conversionesOK}</td></tr>
+        <tr><td>Conversiones -</td><td>${stats.conversionesMal}</td></tr>
+        <tr><td>Drops/Penal</td><td>${stats.drops}</td></tr>
+        <tr><td>Tackles +</td><td>${stats.tacklesPos}</td></tr>
+        <tr><td>Tackles -</td><td>${stats.tacklesNeg}</td></tr>
+        <tr><td>Quiebres</td><td>${stats.quiebres}</td></tr>
+        <tr><td>Pérdidas</td><td>${stats.perdidas}</td></tr>
+        <tr><td>Recuperadas</td><td>${stats.recuperadas}</td></tr>
+        <tr><td>Line +</td><td>${stats.linesPos}</td></tr>
+        <tr><td>Line -</td><td>${stats.linesNeg}</td></tr>
+        <tr><td>Scrum +</td><td>${stats.scrumsPos}</td></tr>
+        <tr><td>Scrum -</td><td>${stats.scrumsNeg}</td></tr>
+        <tr><td>Tarjetas Amarillas</td><td style="color: #d32f2f;">${stats.amarillas}</td></tr>
+        <tr><td>Tarjetas Rojas</td><td style="color: #d32f2f;">${stats.rojas}</td></tr>
+    `
+    
+    const modalHtml = `
+        <div id="modalDetallePartido" class="modal-overlay">
+            <div class="modal-contenido">
+                <div class="modal-header">
+                    <h3>${partido.equipo} vs ${partido.rival}</h3>
+                    <button class="modal-cerrar" onclick="cerrarModalDetalle()">✕</button>
+                </div>
+                <div class="modal-body">
+                    <div class="modal-info">
+                        <div>📅 ${partido.fechaLegible || partido.fecha}</div>
+                        <div>⏱️ Duración: ${partido.duracionLegible || Math.floor(partido.duracion / 60) + ':' + String(partido.duracion % 60).padStart(2, '0')}</div>
+                        <div class="modal-marcador">
+                            <span class="propio">${puntosPropio}</span> - <span class="rival">${puntosRival}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stats-resumen">
+                        <div class="stats-card">
+                            <div class="numero">${stats.tries}</div>
+                            <div class="etiqueta">Tries</div>
+                        </div>
+                        <div class="stats-card">
+                            <div class="numero">${stats.conversionesOK}</div>
+                            <div class="etiqueta">Conversiones</div>
+                        </div>
+                        <div class="stats-card">
+                            <div class="numero">${stats.drops}</div>
+                            <div class="etiqueta">Drops/Penal</div>
+                        </div>
+                        <div class="stats-card">
+                            <div class="numero">${stats.tacklesPos}</div>
+                            <div class="etiqueta">Tackles +</div>
+                        </div>
+                        <div class="stats-card">
+                            <div class="numero">${stats.quiebres}</div>
+                            <div class="etiqueta">Quiebres</div>
+                        </div>
+                        <div class="stats-card">
+                            <div class="numero">${stats.scrumsPos}</div>
+                            <div class="etiqueta">Scrum +</div>
+                        </div>
+                    </div>
+                    
+                    <h4>Acciones del partido</h4>
+                    <table class="stats-tabla">
+                        <thead>
+                            <tr>
+                                <th>Acción</th>
+                                <th>Cantidad</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${filasTabla}
+                        </tbody>
+                    </table>
+                    
+                    <button class="btn-ver-jugadores" onclick="verJugadoresPartido('${partido.id}')">👥 Ver jugadores del partido</button>
+                </div>
+            </div>
+        </div>
+    `
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml)
+}
+function verDetallePartidoOri(index) {
+        // Buscar el partido por ID
+    const partido = historialPartidos.find(p => p.id === partidoId)
+    if (!partido) {
+        alert("No se encontró el partido")
+        return
+    }
+        
+    // Calcular estadísticas del partido histórico
+    const eventosPartido = partido.eventos || []
+    
+    const stats = {
+        tries: eventosPartido.filter(e => e.accion === 'Try').length,
+        conversionesOK: eventosPartido.filter(e => e.accion === 'Conversión ➕').length,
+        conversionesMal: eventosPartido.filter(e => e.accion === 'Conversión ➖').length,
+        drops: eventosPartido.filter(e => e.accion === 'Drop/Penal').length,
+        tacklesPos: eventosPartido.filter(e => e.accion === 'Tackle ➕').length,
+        tacklesNeg: eventosPartido.filter(e => e.accion === 'Tackle ➖').length,
+        quiebres: eventosPartido.filter(e => e.accion === 'Quiebre').length,
+        perdidas: eventosPartido.filter(e => e.accion === '🏉 Perdida').length,
+        recuperadas: eventosPartido.filter(e => e.accion === '🏉 Recuperada').length,
+        linesPos: eventosPartido.filter(e => e.accion === 'Line ➕').length,
+        linesNeg: eventosPartido.filter(e => e.accion === 'Line ➖').length,
+        scrumsPos: eventosPartido.filter(e => e.accion === 'Scrum ➕').length,
+        scrumsNeg: eventosPartido.filter(e => e.accion === 'Scrum ➖').length,
+        amarillas: eventosPartido.filter(e => e.accion === 'Tarjeta 🟨').length,
+        rojas: eventosPartido.filter(e => e.accion === 'Tarjeta 🟥').length
+    }
+    
+    const puntosPropio = partido.puntosPropio || 0
+    const puntosRival = partido.puntosRival || 0
+    
+    // Crear modal
+    const modalHtml = `
+        <div id="modalDetallePartido" class="modal-overlay">
+            <div class="modal-contenido">
+                <div class="modal-header">
+                    <h3>${partido.equipo} vs ${partido.rival}</h3>
+                    <button class="modal-cerrar" onclick="cerrarModalDetalle()">✕</button>
+                </div>
+                <div class="modal-body">
+                    <div class="modal-info">
+                        <div>📅 ${partido.fechaLegible || partido.fecha}</div>
+                        <div>⏱️ Duración: ${partido.duracionLegible || Math.floor(partido.duracion / 60) + ':' + String(partido.duracion % 60).padStart(2, '0')}</div>
+                        <div class="modal-marcador">
+                            <span class="propio">${puntosPropio}</span> - <span class="rival">${puntosRival}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="stats-resumen">
+                        <div class="stats-card">
+                            <div class="numero">${stats.tries}</div>
+                            <div class="etiqueta">Tries</div>
+                        </div>
+                        <div class="stats-card">
+                            <div class="numero">${stats.conversionesOK}</div>
+                            <div class="etiqueta">Conversiones</div>
+                        </div>
+                        <div class="stats-card">
+                            <div class="numero">${stats.drops}</div>
+                            <div class="etiqueta">Drops/Penal</div>
+                        </div>
+                        <div class="stats-card">
+                            <div class="numero">${stats.tacklesPos}</div>
+                            <div class="etiqueta">Tackles +</div>
+                        </div>
+                        <div class="stats-card">
+                            <div class="numero">${stats.quiebres}</div>
+                            <div class="etiqueta">Quiebres</div>
+                        </div>
+                        <div class="stats-card">
+                            <div class="numero">${stats.scrumsPos}</div>
+                            <div class="etiqueta">Scrum +</div>
+                        </div>
+                    </div>
+                    
+                    <h4>Acciones del partido</h4>
+                    <table class="stats-tabla">
+                        <thead><tr><th>Acción</th><th>Cantidad</th> </thead>
+                        <tbody>
+                            <tr><td>Tries</td><td class="destacado">${stats.tries}</td></tr>
+                            <tr><td>Conversiones +</td><td>${stats.conversionesOK}</td></tr>
+                            <tr><td>Conversiones -</td><td>${stats.conversionesMal}</td></tr>
+                            <tr><td>Drops/Penal</td><td>${stats.drops}</td></tr>
+                            <tr><td>Tackles +</td><td>${stats.tacklesPos}</td></tr>
+                            <tr><td>Tackles -</td><td>${stats.tacklesNeg}</td></tr>
+                            <tr><td>Quiebres</td><td>${stats.quiebres}</td></tr>
+                            <tr><td>Line +</td><td>${stats.linesPos}</td></tr>
+                            <tr><td>Line -</td><td>${stats.linesNeg}</td></tr>
+                            <tr><td>Scrum +</td><td>${stats.scrumsPos}</td></tr>
+                            <tr><td>Scrum -</td><td>${stats.scrumsNeg}</td></tr>
+                            <tr><td>Tarjetas Amarillas</td><td style="color: #d32f2f;">${stats.amarillas}</td></tr>
+                            <tr><td>Tarjetas Rojas</td><td style="color: #d32f2f;">${stats.rojas}</td></tr>
+                        </tbody>
+                    </table>
+                    
+                    <button class="btn-ver-jugadores" onclick="verJugadoresPartido(${index})">👥 Ver jugadores del partido</button>
+                </div>
+            </div>
+        </div>
+    `
+    
+    document.body.insertAdjacentHTML('beforeend', modalHtml)
 }
 
-// ===== EXPORTAR PARTIDO =====
-function exportarPartido(index) {
-    const partido = historialPartidos[index]
-    const dataStr = JSON.stringify(partido, null, 2)
-    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr)
-    
-    const exportFileDefaultName = `partido_${partido.equipo}_vs_${partido.rival}_${partido.fecha}.json`
-    
-    const linkElement = document.createElement('a')
-    linkElement.setAttribute('href', dataUri)
-    linkElement.setAttribute('download', exportFileDefaultName)
-    linkElement.click()
+function cerrarModalDetalle() {
+    const modal = document.getElementById('modalDetallePartido')
+    if (modal) modal.remove()
 }
 
 // ===== MODIFICAR FINALIZAR PARTIDO PARA GUARDAR HISTORIAL =====
 function finalizarPartido() {
     if (!confirm("Finalizar partido?")) return
     
-    // Guardar en historial antes de finalizar
+    // Guardar puntos en partidoActual antes de guardar
+    partidoActual.puntosPropio = puntosPropio
+    partidoActual.puntosRival = puntosRival
+    
     guardarPartidoEnHistorial()
     
     corriendo = false
     segundos = 0
     amarillas = []
+    rojas = []
+    puntosPropio = 0
+    puntosRival = 0
+    historialAcciones = []
     
     document.getElementById("cronometro").innerText = "00:00"
     document.getElementById("amarillas").innerHTML = ""
     document.getElementById("ultima").innerText = "Sin eventos"
+    document.getElementById("puntosPropio").innerText = "0"
+    document.getElementById("puntosRival").innerText = "0"
     
     mostrarPantallaConfig()
     document.getElementById("btnIniciar").innerText = "Iniciar"
@@ -961,4 +1570,243 @@ function finalizarPartido() {
     partidoIniciado = false
 }
 
+function verJugadoresPartido(partidoId) {
+    console.log('verJugadoresPartido llamado con ID:', partidoId)
+    
+    const partido = historialPartidos.find(p => p.id === partidoId)
+    if (!partido) {
+        console.error('Partido no encontrado:', partidoId)
+        alert("No se encontró el partido")
+        return
+    }
+    
+    const eventosPartido = partido.eventos || []
+    
+    // Obtener jugadores únicos que participaron
+    const jugadoresUnicos = {}
+    
+    eventosPartido.forEach(e => {
+        if (e.dni && !jugadoresUnicos[e.dni]) {
+            const jugador = jugadores.find(j => j.dni == e.dni)
+            jugadoresUnicos[e.dni] = {
+                dni: e.dni,
+                apodo: jugador ? jugador.apodo : 'Desconocido',
+                numero: jugador ? jugador.camiseta : '-'
+            }
+        }
+    })
+    
+    // Calcular estadísticas por jugador
+    const statsJugadores = {}
+    
+    Object.keys(jugadoresUnicos).forEach(dni => {
+        statsJugadores[dni] = {
+            ...jugadoresUnicos[dni],
+            tries: 0,
+            tacklesPos: 0,
+            tacklesNeg: 0,
+            quiebres: 0,
+            perdidas: 0,
+            recuperadas: 0,
+            drops: 0,
+            conversionesOK: 0,
+            conversionesMal: 0,
+            amarillas: 0,
+            rojas: 0
+        }
+    })
+    
+    eventosPartido.forEach(e => {
+        if (statsJugadores[e.dni]) {
+            if (e.accion === 'Try') statsJugadores[e.dni].tries++
+            else if (e.accion === 'Tackle ➕') statsJugadores[e.dni].tacklesPos++
+            else if (e.accion === 'Tackle ➖') statsJugadores[e.dni].tacklesNeg++
+            else if (e.accion === 'Quiebre') statsJugadores[e.dni].quiebres++
+            else if (e.accion === '🏉 Perdida') statsJugadores[e.dni].perdidas++
+            else if (e.accion === '🏉 Recuperada') statsJugadores[e.dni].recuperadas++
+            else if (e.accion === 'Drop/Penal') statsJugadores[e.dni].drops++
+            else if (e.accion === 'Conversión ➕') statsJugadores[e.dni].conversionesOK++
+            else if (e.accion === 'Conversión ➖') statsJugadores[e.dni].conversionesMal++
+            else if (e.accion === 'Tarjeta 🟨') statsJugadores[e.dni].amarillas++
+            else if (e.accion === 'Tarjeta 🟥') statsJugadores[e.dni].rojas++
+        }
+    })
+    
+    const jugadoresOrdenados = Object.values(statsJugadores)
+        .sort((a, b) => b.tries - a.tries)
+    
+    let jugadoresHtml = `
+        <div style="max-height: 400px; overflow-y: auto; width: 100%;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                <thead>
+                    <tr style="background: #1b5e20; color: white; position: sticky; top: 0;">
+                        <th style="padding: 8px;">#</th>
+                        <th style="padding: 8px;">Jugador</th>
+                        <th style="padding: 8px;">Try</th>
+                        <th style="padding: 8px;">Tk+</th>
+                        <th style="padding: 8px;">Tk-</th>
+                        <th style="padding: 8px;">Q</th>
+                        <th style="padding: 8px;">PP</th>
+                        <th style="padding: 8px;">PR</th>
+                        <th style="padding: 8px;">D/P</th>
+                        <th style="padding: 8px;">Cv+</th>
+                        <th style="padding: 8px;">Cv-</th>
+                        <th style="padding: 8px;">🟨</th>
+                        <th style="padding: 8px;">🟥</th>
+                     </tr>
+                </thead>
+                <tbody>
+    `
+    
+    jugadoresOrdenados.forEach(j => {
+        jugadoresHtml += `
+            <tr style="border-bottom: 1px solid #eee;">
+                <td style="padding: 8px; text-align: center;">${j.numero || '-'}</td>
+                <td style="padding: 8px; text-align: left;">${j.apodo}</td>
+                <td style="padding: 8px; text-align: center; font-weight: bold; color: #1b5e20;">${j.tries}</td>
+                <td style="padding: 8px; text-align: center;">${j.tacklesPos}</td>
+                <td style="padding: 8px; text-align: center;">${j.tacklesNeg}</td>
+                <td style="padding: 8px; text-align: center;">${j.quiebres}</td>
+                <td style="padding: 8px; text-align: center;">${j.perdidas}</td>
+                <td style="padding: 8px; text-align: center;">${j.recuperadas}</td>
+                <td style="padding: 8px; text-align: center;">${j.drops}</td>
+                <td style="padding: 8px; text-align: center;">${j.conversionesOK}</td>
+                <td style="padding: 8px; text-align: center;">${j.conversionesMal}</td>
+                <td style="padding: 8px; text-align: center; color: ${j.amarillas > 0 ? '#d32f2f' : 'inherit'};">${j.amarillas}</td>
+                <td style="padding: 8px; text-align: center; color: ${j.rojas > 0 ? '#d32f2f' : 'inherit'};">${j.rojas}</td>
+             </tr>
+        `
+    })
+    
+    jugadoresHtml += `
+                </tbody>
+             </table>
+        </div>
+        <button class="btn-cerrar-jugadores" onclick="cerrarModalDetalle()" style="width: 100%; background: #1b5e20; color: white; padding: 12px; margin-top: 16px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">Cerrar</button>
+    `
+    
+    const modalBody = document.querySelector('#modalDetallePartido .modal-body')
+    if (modalBody) {
+        modalBody.innerHTML = jugadoresHtml
+    } else {
+        console.error('No se encontró el modal-body')
+    }
+}
+function verJugadoresPartidoOri(index) {
+    const partido = historialPartidos[index]
+    const eventosPartido = partido.eventos || []
+    
+    // Obtener jugadores únicos que participaron en el partido
+    const jugadoresUnicos = {}
+    
+    eventosPartido.forEach(e => {
+        if (e.dni && !jugadoresUnicos[e.dni]) {
+            const jugador = jugadores.find(j => j.dni == e.dni)
+            jugadoresUnicos[e.dni] = {
+                dni: e.dni,
+                apodo: jugador ? jugador.apodo : 'Desconocido',
+                numero: jugador ? jugador.camiseta : '-'
+            }
+        }
+    })
+    
+    // Calcular estadísticas por jugador con todas las acciones
+    const statsJugadores = {}
+    
+    Object.keys(jugadoresUnicos).forEach(dni => {
+        statsJugadores[dni] = {
+            ...jugadoresUnicos[dni],
+            tries: 0,
+            tacklesPos: 0,
+            tacklesNeg: 0,
+            quiebres: 0,
+            perdidas: 0,
+            recuperadas: 0,
+            drops: 0,
+            conversionesOK: 0,
+            conversionesMal: 0,
+            amarillas: 0,
+            rojas: 0
+        }
+    })
+    
+    eventosPartido.forEach(e => {
+        if (statsJugadores[e.dni]) {
+            if (e.accion === 'Try') statsJugadores[e.dni].tries++
+            else if (e.accion === 'Tackle ➕') statsJugadores[e.dni].tacklesPos++
+            else if (e.accion === 'Tackle ➖') statsJugadores[e.dni].tacklesNeg++
+            else if (e.accion === 'Quiebre') statsJugadores[e.dni].quiebres++
+            else if (e.accion === '🏉 Perdida') statsJugadores[e.dni].perdidas++
+            else if (e.accion === '🏉 Recuperada') statsJugadores[e.dni].recuperadas++
+            else if (e.accion === 'Drop/Penal') statsJugadores[e.dni].drops++
+            else if (e.accion === 'Conversión ➕') statsJugadores[e.dni].conversionesOK++
+            else if (e.accion === 'Conversión ➖') statsJugadores[e.dni].conversionesMal++
+            else if (e.accion === 'Tarjeta 🟨') statsJugadores[e.dni].amarillas++
+            else if (e.accion === 'Tarjeta 🟥') statsJugadores[e.dni].rojas++
+        }
+    })
+    
+    const jugadoresOrdenados = Object.values(statsJugadores)
+        .sort((a, b) => b.tries - a.tries)
+    
+    let jugadoresHtml = `
+        <div style="max-height: 400px; overflow-y: auto; width: 100%;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+                <thead>
+                    <tr style="background: #1b5e20; color: white; position: sticky; top: 0;">
+                        <th style="padding: 8px;">#</th>
+                        <th style="padding: 8px;">Jugador</th>
+                        <th style="padding: 8px;">Try</th>
+                        <th style="padding: 8px;">Tk+</th>
+                        <th style="padding: 8px;">Tk-</th>
+                        <th style="padding: 8px;">Q</th>
+                        <th style="padding: 8px;">PP</th>
+                        <th style="padding: 8px;">PR</th>
+                        <th style="padding: 8px;">D/P</th>
+                        <th style="padding: 8px;">Cv+</th>
+                        <th style="padding: 8px;">Cv-</th>
+                        <th style="padding: 8px;">🟨</th>
+                        <th style="padding: 8px;">🟥</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `
+    
+    jugadoresOrdenados.forEach(j => {
+        jugadoresHtml += `
+            <tr style="border-bottom: 1px solid #eee;">
+                <td style="padding: 8px; text-align: center;">${j.numero || '-'}</td>
+                <td style="padding: 8px; text-align: left;">${j.apodo}</td>
+                <td style="padding: 8px; text-align: center; font-weight: bold; color: #1b5e20;">${j.tries}</td>
+                <td style="padding: 8px; text-align: center;">${j.tacklesPos}</td>
+                <td style="padding: 8px; text-align: center;">${j.tacklesNeg}</td>
+                <td style="padding: 8px; text-align: center;">${j.quiebres}</td>
+                <td style="padding: 8px; text-align: center;">${j.perdidas}</td>
+                <td style="padding: 8px; text-align: center;">${j.recuperadas}</td>
+                <td style="padding: 8px; text-align: center;">${j.drops}</td>
+                <td style="padding: 8px; text-align: center;">${j.conversionesOK}</td>
+                <td style="padding: 8px; text-align: center;">${j.conversionesMal}</td>
+                <td style="padding: 8px; text-align: center; color: ${j.amarillas > 0 ? '#d32f2f' : 'inherit'};">${j.amarillas}</td>
+                <td style="padding: 8px; text-align: center; color: ${j.rojas > 0 ? '#d32f2f' : 'inherit'};">${j.rojas}</td>
+            </tr>
+        `
+    })
+    
+    jugadoresHtml += `
+                </tbody>
+            </table>
+        </div>
+        <button class="btn-cerrar-jugadores" onclick="cerrarModalDetalle()" style="width: 100%; background: #757575; color: white; padding: 12px; margin-top: 16px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">Cerrar</button>
+    `
+    
+    const modalBody = document.querySelector('#modalDetallePartido .modal-body')
+    if (modalBody) {
+        modalBody.innerHTML = jugadoresHtml
+    }
+}
+
+// Al final del archivo, donde se llama a mostrarTablaJugadores()
 mostrarTablaJugadores()
+
+// Inicializar el contador con el valor por defecto
+document.getElementById("contador").innerText = `0 / ${document.getElementById("cantidadJugadores").value}`
