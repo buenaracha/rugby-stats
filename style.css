@@ -293,7 +293,7 @@ button {
     display: flex;
     flex-direction: column;
     height: 100%;
-    padding: 10px;
+    padding: 5px;
     overflow: hidden;
     background: #f0f2f5;
 }
@@ -301,7 +301,7 @@ button {
 .headerStats {
     flex: 0 0 auto;
     background: white;
-    padding: 15px;
+    padding: 2px;
     border-radius: 12px;
     margin-bottom: 10px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -311,12 +311,13 @@ button {
     color: #1b5e20;
     margin-bottom: 10px;
     font-size: 24px;
+    margin-left: 5px;
 }
 
 .stats-tabs {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 5px;
+    gap: 2px;
     margin-bottom: 5px;
 }
 
@@ -328,13 +329,14 @@ button {
     border: none;
     border-radius: 6px;
     cursor: pointer;
-    padding: 0 10px;
+    padding: 0 4px;
     height: 30px;
     min-height: 30px;
     display: flex;
     align-items: center;
     justify-content: center;
     width: 100%;
+    white-space: nowrap; /* Evita que el texto se rompa */
 }
 
 .stats-tabs button.tab-active {
@@ -651,7 +653,7 @@ button {
 }
 
 .modal-body .stats-tabla {
-    width: 70%;
+    width: 82%;
     font-size: 12px;
     border-collapse: collapse;
 }
@@ -725,6 +727,44 @@ button {
 
 .modal-body table {
     min-width: 70%;
+}
+
+/* Subpestañas dentro de Jugadores */
+.stats-subtabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #ddd;
+    padding-bottom: 8px;
+}
+
+.stats-subtabs button {
+    flex: 1;
+    background: #e0e0e0;
+    color: #333;
+    font-size: 13px;
+    font-weight: bold;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    padding: 8px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+}
+
+.stats-subtabs button.subtab-active {
+    background: #1b5e20;
+    color: white;
+}
+
+/* Scroll vertical para histórico de jugadores */
+#subtabHistoricoJugadores {
+    max-height: 500px;
+    overflow-y: auto;
+    overflow-x: auto;
 }
 
 /* --- RESPONSIVE HORIZONTAL --- */
