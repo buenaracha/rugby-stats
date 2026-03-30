@@ -327,7 +327,7 @@ async function importarJugadoresSheet() {
                 
                 // Actualizar variable global
                 if (typeof historialPartidos !== 'undefined') {
-                    window.historialPartidos = historialCombinado
+                    historialPartidos = historialCombinado
                 }
                 
                 console.log('Historial guardado:', historialCombinado.length)
