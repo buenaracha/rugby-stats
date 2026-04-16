@@ -36,7 +36,7 @@
     <div id="tablaJugadores"></div>
 
     <div class="linea botones">
-        <button id="btnIniciar" onclick="iniciarPartido()" disabled>Iniciar</button>
+        <button id="btnComenzar" onclick="iniciarPartido()" disabled>Comenzar</button>
         <button onclick="exportarEventos()">Exportar</button>
         <button onclick="borrarSeleccion()">Borrar</button>
         <button onclick="mostrarEstadisticas()">📊 Datos</button>
@@ -65,8 +65,8 @@
 
             <div class="barra-tanteador">
             <button class="btn-rival" onclick="sumarPuntoRival('try')">🏉 Try Rival</   button>
-            <button class="btn-rival" onclick="sumarPuntoRival('conversion')">⚡ Conv   Rival</button>
-            <button class="btn-rival" onclick="sumarPuntoRival('drop')">🎯 Drop     Rival</button>
+            <button class="btn-rival" onclick="sumarPuntoRival('conversion')">⚡ Conv</button>
+            <button class="btn-rival" onclick="sumarPuntoRival('drop')">🎯 Drop Rival</button>
             <button class="btn-deshacer" onclick="deshacerUltimaAccion()">↩️     Deshacer</button>
         </div>
 
@@ -74,7 +74,12 @@
         <div id="acciones" class="grid"></div>
     </div>
 
-    <div id="ultima">Sin eventos</div>
+    <div id="historialAcciones">
+    <div class="historial-titulo">Últimas acciones</div>
+    <div id="listaAcciones" class="lista-acciones">
+        <div class="accion-vacia">Sin eventos</div>
+    </div>
+</div>
 </div>
 
 <div id="pantallaEstadisticas" style="display:none">

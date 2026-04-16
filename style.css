@@ -171,9 +171,9 @@ body, html {
 }
 
 .barraControles button { 
-  font-size: 10px; 
+  font-size: 12px; 
   padding: 5px 2px; 
-  height: 45px; 
+  height: 40px; 
   background: #555;
 }
 
@@ -189,7 +189,7 @@ body, html {
     color: white;
     font-size: 12px;
     padding: 10px 4px;
-    height: 46px;
+    height: 40px;
     border: none;
     border-radius: 6px;
     font-weight: bold;
@@ -201,7 +201,7 @@ body, html {
     color: white;
     font-size: 12px;
     padding: 10px 4px;
-    height: 46px;
+    height: 40px;
     border: none;
     border-radius: 6px;
     font-weight: bold;
@@ -238,25 +238,25 @@ button {
   background: #1b5e20; 
   color: white; 
   font-weight: bold; 
-  min-height: 44px; 
+  min-height: 40px; 
 }
 
 /* Botón Iniciar deshabilitado */
-#btnIniciar:disabled {
+#btnComenzar:disabled {
     background: #999 !important;
     color: #ddd;
     cursor: not-allowed;
 }
 
 /* Botón Iniciar habilitado */
-#btnIniciar:enabled {
+#btnComenzar:enabled {
     background: #1b5e20;
     color: white;
 }
 
 #jugadores button { 
   background: #43a047; 
-  height: 46px; 
+  height: 40px; 
   font-size: 12px; 
 }
 
@@ -268,12 +268,12 @@ button {
 .jugadorSeleccionado { 
   background: #ffb300 !important; 
   color: black; 
-  box-shadow: 0 0 0 2px #000 inset; 
+  box-shadow: 0 0 0 3px #000 inset; 
 }
 
 #acciones button { 
   background: #0288d1; 
-  height: 46px; 
+  height: 40px; 
   font-size: 12px; 
 }
 
@@ -809,4 +809,67 @@ button {
     .equipos {
         font-size: 11px;
     }
+}
+
+/* Historial de acciones en pantalla partido */
+#historialAcciones {
+    flex: 0 0 auto;
+    margin-top: 8px;
+    background: #222;
+    border-radius: 8px;
+    padding: 8px;
+    color: white;
+}
+
+.historial-titulo {
+    font-size: 11px;
+    color: #aaa;
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.lista-acciones {
+    font-size: 12px;
+    min-height: 80px;
+}
+
+.accion-item {
+    padding: 4px 6px;
+    border-bottom: 1px solid #333;
+    font-family: monospace;
+    font-size: 11px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.accion-item:last-child {
+    border-bottom: none;
+}
+
+.accion-item .tiempo {
+    color: #4caf50;
+    font-weight: bold;
+    min-width: 45px;
+}
+
+.accion-item .descripcion {
+    flex: 1;
+    margin-left: 8px;
+    color: #ddd;
+}
+
+.accion-item .puntos {
+    color: #ffb300;
+    font-weight: bold;
+    min-width: 35px;
+    text-align: right;
+}
+
+.accion-vacia {
+    color: #666;
+    text-align: center;
+    padding: 20px;
+    font-style: italic;
 }

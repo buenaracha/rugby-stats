@@ -6,6 +6,9 @@ let partidoID=""
 let equipoActual=""
 let rivalActual=""
 
+let partidoEnCurso = false
+let historialAccionesVisual = []  // Array para almacenar las últimas acciones (máximo 5)
+
 let segundos=0
 let corriendo=false
 let partidoIniciado=false
@@ -164,7 +167,7 @@ function actualizarSeleccion() {
     })
 
     // Habilitar botón Iniciar solo si tenemos la cantidad exacta
-    document.getElementById("btnIniciar").disabled = seleccionados.length !== cantidadMaxima
+    document.getElementById("btnComenzar").disabled = seleccionados.length !== cantidadMaxima
 }
 
 function actualizarColoresBotones() {
@@ -194,16 +197,31 @@ function actualizarColoresBotones() {
 
 // Modifica iniciarPartido() para mantener la coherencia
 function iniciarPartido() {
-    const nuevoEquipo = document.getElementById("equipo").value
-    const nuevoRival = document.getElementById("rival").value
+    // ===== NUEVA VALIDACIÓN =====
+    const equipoInput = document.getElementById("equipo")
+    const rivalInput = document.getElementById("rival")
+    const equipo = equipoInput.value.trim()
+    const rival = rivalInput.value.trim()
     
+    if (equipo === "" || rival === "") {
+        alert("❌ Completá los nombres de EQUIPO y RIVAL antes de comenzar")
+        return
+    }
+    // ===== FIN VALIDACIÓN =====
+    
+    // Limpiar historial visual al comenzar nuevo partido
+    historialAccionesVisual = []
+    actualizarHistorialVisual()
+
+    const nuevoEquipo = equipo
+    const nuevoRival = rival
     const cantidadJugadores = parseInt(document.getElementById("cantidadJugadores").value) || 15
     
     if (!partidoIniciado) {
         equipoActual = nuevoEquipo
         rivalActual = nuevoRival
         
-        // Limpiar cualquier entrada huérfana (finalizado:false) de sesiones anteriores
+        // Limpiar cualquier entrada huérfana
         const huerfanas = historialPartidos.filter(p => p.finalizado === false)
         if (huerfanas.length > 0) {
             historialPartidos = historialPartidos.filter(p => p.finalizado !== false)
@@ -214,7 +232,14 @@ function iniciarPartido() {
         const fecha = ahora.toISOString().slice(0, 10)
         const hora = ahora.toISOString().slice(11, 19).replace(/:/g, '-')
         
-        // Crear entrada directamente en historialPartidos (fuente única de verdad)
+        // ===== BLOQUEAR INPUTS =====
+        document.getElementById("equipo").disabled = true
+        document.getElementById("rival").disabled = true
+        document.getElementById("sheetID").disabled = true
+        partidoEnCurso = true
+        // ===== FIN BLOQUEO =====
+
+        // Crear entrada directamente en historialPartidos
         partidoActual = {
             id: `${fecha}_${hora}_${equipoActual}_vs_${rivalActual}`,
             fechaInicio: ahora.toISOString(),
@@ -225,50 +250,27 @@ function iniciarPartido() {
             cantidadJugadores: cantidadJugadores,
             duracion: 0,
             duracionLegible: '0:00',
-            tries: 0, conversionesOK: 0, drops: 0, tacklesPos: 0,
-            puntosPropio: 0, puntosRival: 0,
+            tries: 0, 
+            conversionesOK: 0, 
+            drops: 0, 
+            tacklesPos: 0,
+            puntosPropio: 0, 
+            puntosRival: 0,
             eventos: [],
             finalizado: false
         }
         
         // Registrar en historialPartidos y apuntar 'eventos' a la misma referencia
         historialPartidos.push(partidoActual)
-        eventos = partidoActual.eventos   // alias: mismo array, no copia
+        eventos = partidoActual.eventos
         
         partidoID = partidoActual.id
         guardarEventos()
         
         console.log('Nuevo partido creado en historialPartidos:', partidoActual.id)
-    } else {
-        // Si ya hay partido iniciado y cambiaron los equipos
-        if (nuevoEquipo !== equipoActual || nuevoRival !== rivalActual) {
-            equipoActual = nuevoEquipo
-            rivalActual = nuevoRival
-            
-            const partes = partidoID.split('_')
-            const fechaHora = partes.slice(0, 2).join('_')
-            const nuevoID = `${fechaHora}_${equipoActual}_vs_${rivalActual}`
-            
-            // Actualizar todos los eventos con el nuevo ID
-            eventos.forEach(evento => { evento.partido = nuevoID })
-            
-            // Actualizar el objeto en historialPartidos
-            const idx = historialPartidos.findIndex(p => p.id === partidoID)
-            if (idx !== -1) {
-                historialPartidos[idx].id     = nuevoID
-                historialPartidos[idx].equipo = equipoActual
-                historialPartidos[idx].rival  = rivalActual
-                partidoActual = historialPartidos[idx]
-            }
-            
-            partidoID = nuevoID
-            guardarEventos()
-            
-            console.log('Partido actualizado. Eventos migrados y guardados')
-        }
     }
-
-    // Resto del código...
+    
+    // Resto del código (fuera del if)
     titulares = []
     
     document.querySelectorAll("#tablaJugadores .filaJugador").forEach(f => {
@@ -399,23 +401,16 @@ function registrarEvento(accion) {
     let puntosASumar = 0
     if (accion === 'Try') puntosASumar = 5
     else if (accion === 'Conversión ➕') puntosASumar = 2
-    else if (accion === 'Drop') puntosASumar = 3
+    else if (accion === 'Drop/Penal') puntosASumar = 3  // ← CORREGIDO: coincide con el nombre de la acción
     
     if (puntosASumar > 0) {
         puntosPropio += puntosASumar
         document.getElementById('puntosPropio').innerText = puntosPropio
-        
-        // Guardar en historial para deshacer
-        historialAcciones.push({
-            tipo: 'puntoPropio',
-            accion: accion,
-            puntos: puntosASumar,
-            timestamp: Date.now()
-        })
     }
 
+    // ===== CREAR EVENTO =====
     let evento = {
-        partido: partidoID,
+        partido: partidoActual.id,
         dni: esAccionEquipo ? null : jugadorSeleccionado.dni,
         accion: accion,
         tiempo: tiempo,
@@ -423,66 +418,46 @@ function registrarEvento(accion) {
         esEquipo: esAccionEquipo
     }
 
-    // 'eventos' ES el array de historialPartidos[activo].eventos (misma referencia)
+    // ===== AGREGAR AL HISTORIAL VISUAL =====
+    let descripcion = ""
+    if (esAccionEquipo) {
+        descripcion = `EQUIPO: ${accion}`
+    } else {
+        descripcion = `${jugadorSeleccionado.apodo}: ${accion}`
+    }
+    agregarAlHistorialVisual(descripcion, tiempo, puntosASumar)
+
     eventos.push(evento)
     guardarEventos()
     
-    // Guardar en historial para deshacer
-    if (!esAccionEquipo) {
-        historialAcciones.push({
-            tipo: 'evento',
-            dni: jugadorSeleccionado.dni,
-            accion: accion,
-            tiempo: tiempo,
-            eventoCompleto: evento
-        })
-    } else {
-        historialAcciones.push({
-            tipo: 'eventoEquipo',
-            accion: accion,
-            tiempo: tiempo,
-            eventoCompleto: evento
-        })
-    }
+    // ===== GUARDAR EN HISTORIAL PARA DESHACER (UNIFICADO) =====
+    // Guardamos UN SOLO registro que contiene TODO: la acción y los puntos
+    historialAcciones.push({
+        tipo: 'accion_completa',
+        evento: evento,
+        puntos: puntosASumar,
+        accion: accion,
+        dni: esAccionEquipo ? null : jugadorSeleccionado?.dni,
+        tiempo: tiempo,
+        esAccionEquipo: esAccionEquipo
+    })
 
-    // Manejo de tarjetas
-    if (!esAccionEquipo && accion.includes("🟨")) {
+    // ===== MANEJO DE TARJETAS =====
+    if (!esAccionEquipo && accion === "Tarjeta 🟨") {
         let regreso = segundos + (15 * 60)
         amarillas.push({
             dni: jugadorSeleccionado.dni,
             apodo: jugadorSeleccionado.apodo,
             regreso: regreso
         })
-        historialAcciones.push({
-            tipo: 'tarjeta',
-            subtipo: 'amarilla',
-            dni: jugadorSeleccionado.dni,
-            apodo: jugadorSeleccionado.apodo,
-            regreso: regreso
-        })
     }
     
-    if (!esAccionEquipo && accion.includes("🟥")) {
+    if (!esAccionEquipo && accion === "Tarjeta 🟥") {
         amarillas = amarillas.filter(a => a.dni !== jugadorSeleccionado.dni)
         rojas.push({
             dni: jugadorSeleccionado.dni,
             apodo: jugadorSeleccionado.apodo
         })
-        historialAcciones.push({
-            tipo: 'tarjeta',
-            subtipo: 'roja',
-            dni: jugadorSeleccionado.dni,
-            apodo: jugadorSeleccionado.apodo
-        })
-    }
-
-    // Mensaje en pantalla
-    if (esAccionEquipo) {
-        document.getElementById("ultima").innerText = "EQUIPO: " + accion + " " + tiempo
-    } else {
-        let mensaje = jugadorSeleccionado.apodo + " " + accion + " " + tiempo
-        if (puntosASumar > 0) mensaje += " (+" + puntosASumar + " pts)"
-        document.getElementById("ultima").innerText = mensaje
     }
 
     // Limpiar selección solo si fue acción de jugador
@@ -568,7 +543,12 @@ function modoCambios() {
     mostrarPantallaConfig()
     
     if (partidoIniciado) {
-        document.getElementById("btnIniciar").innerText = "Continuar"
+        document.getElementById("btnComenzar").innerText = "Continuar"
+        // Asegurar que los inputs sigan bloqueados
+        document.getElementById("equipo").disabled = true
+        document.getElementById("rival").disabled = true
+    } else {
+        document.getElementById("btnComenzar").innerText = "Comenzar"
     }
 }
 
@@ -664,9 +644,10 @@ function actualizarAmarillas(){
 
 function sumarPuntoRival(tipo) {
     let puntos = 0
-    if (tipo === 'try') puntos = 5
-    else if (tipo === 'conversion') puntos = 2
-    else if (tipo === 'drop') puntos = 3
+    let texto = ""
+    if (tipo === 'try') { puntos = 5; texto = "Try Rival" }
+    else if (tipo === 'conversion') { puntos = 2; texto = "Conv Rival" }
+    else if (tipo === 'drop') { puntos = 3; texto = "Drop Rival" }
     
     historialAcciones.push({
         tipo: 'punto',
@@ -679,18 +660,23 @@ function sumarPuntoRival(tipo) {
     puntosRival += puntos
     document.getElementById('puntosRival').innerText = puntosRival
     
+    // ===== CREAR EVENTO (VERSIÓN SIMPLIFICADA) =====
     let evento = {
-        partido: partidoID,
+        partido: partidoActual.id,  // ← Usa el ID desde la fuente de verdad
         dni: null,
         accion: `RIVAL: ${tipo.toUpperCase()} +${puntos}`,
         tiempo: document.getElementById('cronometro').innerText,
         timestamp: new Date().toISOString()
     }
-    // 'eventos' ES el array de historialPartidos[activo].eventos (misma referencia)
+    
+    // SOLO UNA VEZ - eventos ya es = partidoActual.eventos
     eventos.push(evento)
     guardarEventos()
     
-    document.getElementById("ultima").innerText = `RIVAL: ${tipo.toUpperCase()} +${puntos}`
+    // ===== AGREGAR AL HISTORIAL VISUAL =====
+    const tiempoActual = document.getElementById('cronometro').innerText
+    agregarAlHistorialVisual(`RIVAL: ${texto}`, tiempoActual, puntos)
+    // ===== FIN HISTORIAL VISUAL =====
 }
 
 function deshacerUltimaAccion() {
@@ -701,12 +687,65 @@ function deshacerUltimaAccion() {
     
     const ultima = historialAcciones.pop()
     
+    // ===== NUEVO: Manejar acción completa (unificada) =====
+    if (ultima.tipo === 'accion_completa') {
+        // 1. Restar puntos si los había
+        if (ultima.puntos > 0) {
+            puntosPropio -= ultima.puntos
+            document.getElementById('puntosPropio').innerText = puntosPropio
+        }
+        
+        // 2. Eliminar el evento del array
+        const index = eventos.findIndex(e => 
+            e.accion === ultima.accion && 
+            e.tiempo === ultima.tiempo &&
+            e.dni === ultima.dni
+        )
+        if (index !== -1) {
+            eventos.splice(index, 1)
+        }
+        
+        // 3. Si era tarjeta, deshacerla
+        if (ultima.accion === "Tarjeta 🟨") {
+            amarillas = amarillas.filter(a => a.dni !== ultima.dni)
+            // Liberar al jugador visualmente
+            const boton = document.querySelector(`#jugadores button[data-dni='${ultima.dni}']`)
+            if (boton && !rojas.some(r => r.dni === ultima.dni)) {
+                boton.style.setProperty('background', '#43a047', 'important')
+                boton.style.setProperty('color', 'white', 'important')
+                boton.disabled = false
+            }
+        }
+        
+        if (ultima.accion === "Tarjeta 🟥") {
+            rojas = rojas.filter(r => r.dni !== ultima.dni)
+            const boton = document.querySelector(`#jugadores button[data-dni='${ultima.dni}']`)
+            if (boton && !amarillas.some(a => a.dni === ultima.dni && a.regreso > segundos)) {
+                boton.style.setProperty('background', '#43a047', 'important')
+                boton.style.setProperty('color', 'white', 'important')
+                boton.disabled = false
+            }
+        }
+        
+        guardarEventos()
+        actualizarColoresBotones()
+        actualizarAmarillas()
+        
+        // Sincronizar historial visual eliminando la última acción
+        if (historialAccionesVisual.length > 0) {
+            historialAccionesVisual.shift()  // Elimina la más reciente
+            actualizarHistorialVisual()
+        }
+        return
+    }
+    
+    // ===== MANTENER COMPATIBILIDAD CON VERSIÓN ANTERIOR =====
+    // (por si quedan datos viejos en el historial)
+    
     if (ultima.tipo === 'punto') {
-        // Deshacer punto del rival
         if (ultima.equipo === 'rival') {
             puntosRival -= ultima.puntos
             document.getElementById('puntosRival').innerText = puntosRival
-            document.getElementById("ultima").innerText = `Deshecho: Rival -${ultima.puntos} puntos`
             
             for (let i = eventos.length - 1; i >= 0; i--) {
                 if (eventos[i].accion && eventos[i].accion.includes('RIVAL')) {
@@ -718,12 +757,9 @@ function deshacerUltimaAccion() {
         }
     }
     else if (ultima.tipo === 'puntoPropio') {
-        // Deshacer punto del equipo propio
         puntosPropio -= ultima.puntos
         document.getElementById('puntosPropio').innerText = puntosPropio
-        document.getElementById("ultima").innerText = `Deshecho: ${ultima.accion} -${ultima.puntos} pts`
         
-        // Eliminar el último evento de punto propio
         for (let i = eventos.length - 1; i >= 0; i--) {
             if (eventos[i].accion === ultima.accion && 
                 eventos[i].dni !== null &&
@@ -743,7 +779,6 @@ function deshacerUltimaAccion() {
         if (index !== -1) {
             eventos.splice(index, 1)
             guardarEventos()
-            document.getElementById("ultima").innerText = `Deshecho: ${ultima.accion} de ${ultima.dni}`
         }
     }
     else if (ultima.tipo === 'eventoEquipo') {
@@ -755,46 +790,43 @@ function deshacerUltimaAccion() {
         if (index !== -1) {
             eventos.splice(index, 1)
             guardarEventos()
-            document.getElementById("ultima").innerText = `Deshecho: EQUIPO ${ultima.accion}`
         }
     }
     else if (ultima.tipo === 'tarjeta') {
-    if (ultima.subtipo === 'amarilla') {
-        amarillas = amarillas.filter(a => a.dni !== ultima.dni)
-        document.getElementById("ultima").innerText = `Deshecho: Tarjeta amarilla para ${ultima.apodo}`
-        
-        // Liberar al jugador visualmente
-        const boton = document.querySelector(`#jugadores button[data-dni='${ultima.dni}']`)
-        if (boton) {
-            boton.style.setProperty('background', '#43a047', 'important')
-            boton.style.setProperty('color', 'white', 'important')
-            boton.disabled = false
+        if (ultima.subtipo === 'amarilla') {
+            amarillas = amarillas.filter(a => a.dni !== ultima.dni)
+            
+            const boton = document.querySelector(`#jugadores button[data-dni='${ultima.dni}']`)
+            if (boton) {
+                boton.style.setProperty('background', '#43a047', 'important')
+                boton.style.setProperty('color', 'white', 'important')
+                boton.disabled = false
+            }
+        } else if (ultima.subtipo === 'roja') {
+            rojas = rojas.filter(r => r.dni !== ultima.dni)
+            
+            const boton = document.querySelector(`#jugadores button[data-dni='${ultima.dni}']`)
+            if (boton && !amarillas.some(a => a.dni === ultima.dni && a.regreso > segundos)) {
+                boton.style.setProperty('background', '#43a047', 'important')
+                boton.style.setProperty('color', 'white', 'important')
+                boton.disabled = false
+            }
         }
-    } else if (ultima.subtipo === 'roja') {
-        rojas = rojas.filter(r => r.dni !== ultima.dni)
-        document.getElementById("ultima").innerText = `Deshecho: Tarjeta roja para ${ultima.apodo}`
         
-        // Liberar al jugador visualmente
-        const boton = document.querySelector(`#jugadores button[data-dni='${ultima.dni}']`)
-        if (boton && !amarillas.some(a => a.dni === ultima.dni && a.regreso > segundos)) {
-            boton.style.setProperty('background', '#43a047', 'important')
-            boton.style.setProperty('color', 'white', 'important')
-            boton.disabled = false
+        for (let i = eventos.length - 1; i >= 0; i--) {
+            if (eventos[i].accion && eventos[i].accion.includes(ultima.subtipo === 'amarilla' ? '🟨' : '🟥') && 
+                eventos[i].dni === ultima.dni) {
+                eventos.splice(i, 1)
+                break
+            }
         }
+        guardarEventos()
+        actualizarColoresBotones()
+        actualizarAmarillas()
     }
     
-    // Eliminar el evento de tarjeta
-    for (let i = eventos.length - 1; i >= 0; i--) {
-        if (eventos[i].accion && eventos[i].accion.includes(ultima.subtipo === 'amarilla' ? '🟨' : '🟥') && 
-            eventos[i].dni === ultima.dni) {
-            eventos.splice(i, 1)
-            break
-        }
-    }
-    guardarEventos()
     actualizarColoresBotones()
-    actualizarAmarillas()  // Actualizar la barra superior
-    }
+    actualizarAmarillas()
 }
 
 // ===== VARIABLES GLOBALES PARA ESTADÍSTICAS =====
@@ -1467,6 +1499,7 @@ function cargarEstadisticasJugadoresActual() {
 // ===== GUARDAR PARTIDO EN HISTORIAL =====
 function guardarPartidoEnHistorial() {
     if (!partidoIniciado || titulares.length === 0) return
+
     if (!partidoActual || !partidoActual.eventos) {
         console.warn('No hay datos del partido actual para guardar')
         return
@@ -1640,12 +1673,29 @@ function finalizarPartido() {
     
     document.getElementById("cronometro").innerText = "00:00"
     document.getElementById("amarillas").innerHTML = ""
-    document.getElementById("ultima").innerText = "Sin eventos"
     document.getElementById("puntosPropio").innerText = "0"
     document.getElementById("puntosRival").innerText = "0"
+    // Limpiar historial visual al finalizar
+    historialAccionesVisual = []
+    actualizarHistorialVisual()
+
+    // ===== DESBLOQUEAR Y LIMPIAR INPUTS =====
+    const equipoInput = document.getElementById("equipo")
+    const rivalInput = document.getElementById("rival")
+    const sheetInput = document.getElementById("sheetID")
+    
+    equipoInput.disabled = false
+    rivalInput.disabled = false
+    sheetInput.disabled = false
+    
+    // Limpiar los campos para el próximo partido
+    equipoInput.value = ""
+    rivalInput.value = ""
+    partidoEnCurso = false
+    // ===== FIN LIMPIEZA =====
     
     mostrarPantallaConfig()
-    document.getElementById("btnIniciar").innerText = "Iniciar"
+    document.getElementById("btnComenzar").innerText = "Comenzar"
     
     partidoFinalizado = true
     partidoIniciado = false
@@ -1776,6 +1826,48 @@ function verJugadoresPartido(partidoId) {
     } else {
         console.error('No se encontró el modal-body')
     }
+}
+
+function actualizarHistorialVisual() {
+    const contenedor = document.getElementById("listaAcciones")
+    if (!contenedor) return
+    
+    if (historialAccionesVisual.length === 0) {
+        contenedor.innerHTML = '<div class="accion-vacia">Sin eventos</div>'
+        return
+    }
+    
+    let html = ""
+    // Mostrar desde la más reciente a la más antigua
+    for (let i = historialAccionesVisual.length - 1; i >= 0; i--) {
+        const item = historialAccionesVisual[i]
+        const puntosTexto = item.puntos > 0 ? `<span class="puntos">+${item.puntos}</span>` : ""
+        html += `
+            <div class="accion-item">
+                <span class="tiempo">${item.tiempo}</span>
+                <span class="descripcion">${item.descripcion}</span>
+                ${puntosTexto}
+            </div>
+        `
+    }
+    
+    contenedor.innerHTML = html
+}
+
+function agregarAlHistorialVisual(descripcion, tiempo, puntos = 0) {
+    historialAccionesVisual.unshift({  // unshift agrega al principio (más reciente)
+        descripcion: descripcion,
+        tiempo: tiempo,
+        puntos: puntos,
+        timestamp: Date.now()
+    })
+    
+    // Mantener solo las últimas 5
+    if (historialAccionesVisual.length > 5) {
+        historialAccionesVisual.pop()
+    }
+    
+    actualizarHistorialVisual()
 }
 
 // Al final del archivo, donde se llama a mostrarTablaJugadores()
