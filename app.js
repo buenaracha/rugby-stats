@@ -1839,7 +1839,7 @@ function actualizarHistorialVisual() {
     
     let html = ""
     // Mostrar desde la más reciente a la más antigua
-    for (let i = historialAccionesVisual.length; i++) {
+   for (let i = 0; i < historialAccionesVisual.length; i++) {
         const item = historialAccionesVisual[i]
         const puntosTexto = item.puntos > 0 ? `<span class="puntos">+${item.puntos}</span>` : ""
         html += `
