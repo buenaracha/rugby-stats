@@ -1,13 +1,16 @@
 const CACHE="rugby-stats-v1"
 
-const archivos=[
-"./",
-"./index.html",
-"./style.css",
-"./app.js",
-"./sheet.js",
-"./storage.js"
-]
+const archivos = [
+  "./",
+  "./index.html",
+  "./style.css",
+  "./app.js",
+  "./sheet.js",
+  "./storage.js",
+  "./manifest.json",
+  "./icon.png",    // Asegurate de que estos nombres sean exactos
+  "./icon512.png"  // Si no existen, borrar estas líneas
+];
 
 self.addEventListener("install",e=>{
 e.waitUntil(

@@ -612,11 +612,9 @@ button {
 }
 
 .modal-body {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
     padding: 16px;
     overflow-y: auto;
+    overflow-x: hidden;  /* ← Cambiado: esconder scroll horizontal general */
 }
 
 .modal-body h4 {
@@ -652,38 +650,80 @@ button {
     color: #d32f2f;
 }
 
+/* Contenedor con scroll para la tabla de acciones */
+.modal-body .tabla-acciones-wrapper {
+    overflow-x: auto;
+    width: 100%;
+    margin-bottom: 16px;
+}
+
 .modal-body .stats-tabla {
-    width: 82%;
-    font-size: 12px;
+    min-width: 200px;
+    font-size: 11px;
     border-collapse: collapse;
+    width: 100%;
 }
 
 .modal-body .stats-tabla th,
 .modal-body .stats-tabla td {
-    padding: 6px 4px;
+    padding: 6px 8px;
+    white-space: nowrap;
+    text-align: left;
 }
 
-.modal-body .stats-tabla td:nth-child(2),
-.modal-body .stats-tabla th:nth-child(2) {
+.modal-body .stats-tabla th:first-child,
+.modal-body .stats-tabla td:first-child {
+    text-align: left;
+}
+
+.modal-body .stats-tabla th:not(:first-child),
+.modal-body .stats-tabla td:not(:first-child) {
     text-align: center;
-}
-
-.modal-body .stats-tabla thead {
-    background: #1b5e20;
 }
 
 .modal-body .stats-tabla th {
     background: #1b5e20;
     color: white;
+    position: sticky;
+    top: 0;
 }
 
-.modal-body table thead {
-    background: #1b5e20;
+/* Contenedor con scroll para la tabla de jugadores */
+.modal-body .tabla-jugadores-wrapper {
+    overflow-x: auto;
+    width: 100%;
+    margin: 16px 0;
 }
 
-.modal-body table th {
+.modal-body .tabla-jugadores-wrapper table {
+    min-width: 750px;
+    font-size: 10px;
+    border-collapse: collapse;
+    width: 100%;
+}
+
+.modal-body .tabla-jugadores-wrapper th,
+.modal-body .tabla-jugadores-wrapper td {
+    padding: 5px 4px;
+    white-space: nowrap;
+    text-align: center;
+}
+
+.modal-body .tabla-jugadores-wrapper th:first-child,
+.modal-body .tabla-jugadores-wrapper td:first-child {
+    text-align: center;
+}
+
+.modal-body .tabla-jugadores-wrapper th:second-child,
+.modal-body .tabla-jugadores-wrapper td:second-child {
+    text-align: left;
+}
+
+.modal-body .tabla-jugadores-wrapper th {
     background: #1b5e20;
     color: white;
+    position: sticky;
+    top: 0;
 }
 
 .btn-ver-jugadores {
@@ -708,25 +748,6 @@ button {
     border-radius: 8px;
     font-weight: bold;
     cursor: pointer;
-}
-
-/* Tabla de jugadores dentro del modal */
-.modal-body table {
-    font-size: 12px;
-    border-collapse: collapse;
-}
-
-.modal-body table th,
-.modal-body table td {
-    padding: 6px 4px;
-}
-/* Scroll horizontal para tabla de jugadores en modal */
-.modal-body {
-    overflow-x: auto;
-}
-
-.modal-body table {
-    min-width: 70%;
 }
 
 /* Subpestañas dentro de Jugadores */
