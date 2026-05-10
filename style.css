@@ -894,3 +894,42 @@ button {
     padding: 20px;
     font-style: italic;
 }
+
+/* ===== STICKY HEADER + PRIMERA COLUMNA EN TABLAS DE JUGADORES ===== */
+
+/* El contenedor ya tiene overflow-x: auto, necesita también overflow-y */
+#subtabActualJugadores > div,
+#subtabHistoricoJugadores > div,
+.modal-body > div[style*="overflow-x"] {
+    overflow-y: auto;
+    max-height: 60vh;
+}
+
+/* Primera fila fija (encabezados) */
+.stats-tabla thead th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background: #1b5e20;
+    color: white;
+}
+
+/* Primera columna fija (nombre del jugador) */
+.stats-tabla tbody td:first-child,
+.stats-tabla thead th:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: white;
+}
+
+/* La primera celda del header es sticky en ambas direcciones */
+.stats-tabla thead th:first-child {
+    z-index: 4;
+    background: #1b5e20;
+}
+
+/* Zebra striping para que se vea bien al hacer sticky */
+.stats-tabla tbody tr:nth-child(even) td:first-child {
+    background: #f5f5f5;
+}
