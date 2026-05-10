@@ -29,16 +29,17 @@ let acciones=[
 "🏉 Recuperada",
 "🏉 Perdida",
 "Try",
-"Conversión ➕",
-"Conversión ➖",
+"Recepción ➕",
+"Recepción ➖",
 "Drop",
 "Scrum ➕",
 "Scrum ➖",
 "Line Robado",
 "Line ➕",
 "Line ➖",
-"Tarjeta 🟨",
-"Tarjeta 🟥"
+"Conversión",
+"Avance 🦶​",
+"Tarjeta"
 ]
 
 let partidoActual = {
@@ -58,6 +59,79 @@ if ('serviceWorker' in navigator) {
       .then(reg => console.log('Service Worker registrado con éxito', reg))
       .catch(err => console.warn('Error al registrar el service worker', err));
   });
+}
+
+function mostrarSubOpciones(accionPadre) {
+    let opciones = []
+    
+    if (accionPadre === 'Conversión') {
+        opciones = ['Conversión ➕', 'Conversión ➖']
+    } else if (accionPadre === 'Tarjeta') {
+        opciones = ['Tarjeta 🟨', 'Tarjeta 🟥']
+    } else if (accionPadre === 'Avance 🦶​') {
+        opciones = ['Avance 🦶​ ➕', 'Avance 🦶​ ➖']
+    } else {
+        return
+    }
+    
+    // Crear modal
+    const modal = document.createElement('div')
+    modal.style.position = 'fixed'
+    modal.style.bottom = '0'
+    modal.style.left = '0'
+    modal.style.right = '0'
+    modal.style.background = '#1e1e1e'
+    modal.style.borderRadius = '16px 16px 0 0'
+    modal.style.padding = '16px'
+    modal.style.zIndex = '2000'
+    modal.style.boxShadow = '0 -4px 12px rgba(0,0,0,0.3)'
+    
+    let html = `<div style="display: flex; flex-direction: column; gap: 8px;">`
+    html += `<div style="color: white; text-align: center; margin-bottom: 8px;">${accionPadre}</div>`
+    opciones.forEach(op => {
+        let bgColor = '#1b5e20'
+        if (op.includes('➖')) bgColor = '#d32f2f'
+        if (op.includes('🟥')) bgColor = '#d32f2f'
+        if (op.includes('🟨')) bgColor = '#ffb300'
+        html += `<button style="background: ${bgColor}; padding: 14px; font-size: 16px; border-radius: 10px;" onclick="seleccionarOpcion('${op}')">${op}</button>`
+    })
+    html += `<button style="background: #555; padding: 12px;" onclick="cerrarModalOpciones()">Cancelar</button></div>`
+    
+    modal.innerHTML = html
+    modal.id = 'modalOpciones'
+    document.body.appendChild(modal)
+}
+
+function seleccionarOpcion(accion) {
+    cerrarModalOpciones()
+    registrarEvento(accion)
+}
+
+function cerrarModalOpciones() {
+    const modal = document.getElementById('modalOpciones')
+    if (modal) modal.remove()
+}
+
+function crearAcciones() {
+    let cont = document.getElementById("acciones")
+    cont.innerHTML = ""
+    
+    // Acciones que abren modal (juego detenido)
+    const accionesConModal = ['Conversión', 'Tarjeta', 'Avance 🦶​']
+    
+    acciones.forEach(a => {
+        let b = document.createElement("button")
+        b.innerText = a
+        b.className = "accion"
+        
+        if (accionesConModal.includes(a)) {
+            b.onclick = () => mostrarSubOpciones(a)
+        } else {
+            b.onclick = () => registrarEvento(a)
+        }
+        
+        cont.appendChild(b)
+    })
 }
 
 // Modifica mostrarTablaJugadores() para respetar los titulares actuales
@@ -361,26 +435,6 @@ function jugadorSuspendido(dni){
     return amarillas.some(a => String(a.dni) === dniStr && a.regreso > segundos)
 }
 
-function crearAcciones(){
-
-let cont=document.getElementById("acciones")
-cont.innerHTML=""
-
-acciones.forEach(a=>{
-
-let b=document.createElement("button")
-
-b.innerText=a
-b.className="accion"
-
-b.onclick=()=>registrarEvento(a)
-
-cont.appendChild(b)
-
-})
-
-}
-
 function registrarEvento(accion) {
     // Verificar si es una acción de equipo (no requiere jugador)
     const accionesEquipo = ["Line ➕", "Line ➖", "Scrum ➕", "Scrum ➖", "Line Robado"]
@@ -401,7 +455,7 @@ function registrarEvento(accion) {
     let puntosASumar = 0
     if (accion === 'Try') puntosASumar = 5
     else if (accion === 'Conversión ➕') puntosASumar = 2
-    else if (accion === 'Drop/Penal') puntosASumar = 3  // ← CORREGIDO: coincide con el nombre de la acción
+    else if (accion === 'Drop') puntosASumar = 3  // ← CORREGIDO: coincide con el nombre de la acción
     
     if (puntosASumar > 0) {
         puntosPropio += puntosASumar
@@ -443,21 +497,24 @@ function registrarEvento(accion) {
     })
 
     // ===== MANEJO DE TARJETAS =====
-    if (!esAccionEquipo && accion === "Tarjeta 🟨") {
-        let regreso = segundos + (15 * 60)
+    if (!esAccionEquipo && accion.includes('🟨')) {
+        let regreso = segundos + (10 * 60)
         amarillas.push({
             dni: jugadorSeleccionado.dni,
             apodo: jugadorSeleccionado.apodo,
             regreso: regreso
         })
+        // Mensaje visual inmediato
+        //document.getElementById("ultima").innerText = `🟨 Tarjeta Amarilla - ${jugadorSeleccionado.apodo} (10 min)`
     }
     
-    if (!esAccionEquipo && accion === "Tarjeta 🟥") {
+    if (!esAccionEquipo && accion.includes('🟥')) {
         amarillas = amarillas.filter(a => a.dni !== jugadorSeleccionado.dni)
         rojas.push({
             dni: jugadorSeleccionado.dni,
             apodo: jugadorSeleccionado.apodo
         })
+        //document.getElementById("ultima").innerText = `🟥 Tarjeta Roja - ${jugadorSeleccionado.apodo}`
     }
 
     // Limpiar selección solo si fue acción de jugador
@@ -976,38 +1033,21 @@ function cargarEstadisticasActual() {
     
     const eventosPartido = eventos.filter(e => e.partido === partidoID)
     
-    // Calcular estadísticas con NUEVAS ACCIONES
-    const stats = {
-        // Puntos
+    // Calcular estadísticas para las CARDS (solo números grandes)
+    const statsCards = {
         tries: eventosPartido.filter(e => e.accion === 'Try').length,
         conversionesOK: eventosPartido.filter(e => e.accion === 'Conversión ➕').length,
-        conversionesMal: eventosPartido.filter(e => e.accion === 'Conversión ➖').length,
-        drops: eventosPartido.filter(e => e.accion === 'Drop').length,
-        
-        // Tackles y quiebres
-        tacklesPos: eventosPartido.filter(e => e.accion === 'Tackle ➕').length,
-        tacklesNeg: eventosPartido.filter(e => e.accion === 'Tackle ➖').length,
-        quiebres: eventosPartido.filter(e => e.accion === 'Quiebre').length,
-        
-        // Pelota
-        perdidas: eventosPartido.filter(e => e.accion === '🏉 Perdida').length,
-        recuperadas: eventosPartido.filter(e => e.accion === '🏉 Recuperada').length,
-        
-        // NUEVAS ACCIONES
         penal: eventosPartido.filter(e => e.accion === 'Penal').length,
-        linesPos: eventosPartido.filter(e => e.accion === 'Line ➕').length,
-        linesNeg: eventosPartido.filter(e => e.accion === 'Line ➖').length,
-        linesRob: eventosPartido.filter(e => e.accion === 'Line Robado').length,
-        scrumsPos: eventosPartido.filter(e => e.accion === 'Scrum ➕').length,
-        scrumsNeg: eventosPartido.filter(e => e.accion === 'Scrum ➖').length,
-        
-        // Tarjetas
-        amarillas: eventosPartido.filter(e => e.accion === 'Tarjeta 🟨').length,
-        rojas: eventosPartido.filter(e => e.accion === 'Tarjeta 🟥').length
+        tacklesPos: eventosPartido.filter(e => e.accion === 'Tackle ➕').length,
+        quiebres: eventosPartido.filter(e => e.accion === 'Quiebre').length,
+        scrumsPos: eventosPartido.filter(e => e.accion === 'Scrum ➕').length
     }
     
-    const puntos = (stats.tries * 5) + (stats.conversionesOK * 2) + (stats.drops * 3)
+    const puntos = (statsCards.tries * 5) + (statsCards.conversionesOK * 2)
     const tiempoActual = document.getElementById('cronometro').innerText
+    
+    // GENERAR LA TABLA CON LA NUEVA FUNCIÓN
+    const tablaAcciones = generarTablaAcciones(eventosPartido)
     
     let html = `
         <div class="stats-info-partido">
@@ -1021,56 +1061,33 @@ function cargarEstadisticasActual() {
         
         <div class="stats-resumen">
             <div class="stats-card">
-                <div class="numero">${stats.tries}</div>
+                <div class="numero">${statsCards.tries}</div>
                 <div class="etiqueta">Tries</div>
             </div>
             <div class="stats-card">
-                <div class="numero">${stats.conversionesOK}</div>
+                <div class="numero">${statsCards.conversionesOK}</div>
                 <div class="etiqueta">Conversiones</div>
             </div>
             <div class="stats-card">
-                <div class="numero">${stats.penal}</div>
+                <div class="numero">${statsCards.penal}</div>
                 <div class="etiqueta">Penales</div>
             </div>
             <div class="stats-card">
-                <div class="numero">${stats.tacklesPos}</div>
+                <div class="numero">${statsCards.tacklesPos}</div>
                 <div class="etiqueta">Tackles +</div>
             </div>
             <div class="stats-card">
-                <div class="numero">${stats.quiebres}</div>
+                <div class="numero">${statsCards.quiebres}</div>
                 <div class="etiqueta">Quiebres</div>
             </div>
             <div class="stats-card">
-                <div class="numero">${stats.scrumsPos}</div>
+                <div class="numero">${statsCards.scrumsPos}</div>
                 <div class="etiqueta">Scrums +</div>
             </div>
         </div>
         
         <h3>Acciones del partido</h3>
-        <table class="stats-tabla">
-            <thead>
-                <tr><th>Acción</th><th>Cantidad</th></tr>
-            </thead>
-            <tbody>
-                <tr><td>Tries</td><td class="destacado">${stats.tries}</td></tr>
-                <tr><td>Conversiones +</td><td>${stats.conversionesOK}</td></tr>
-                <tr><td>Conversiones -</td><td>${stats.conversionesMal}</td></tr>
-                <tr><td>Drops</td><td>${stats.drops}</td></tr>
-                <tr><td>Tackles +</td><td>${stats.tacklesPos}</td></tr>
-                <tr><td>Tackles -</td><td>${stats.tacklesNeg}</td></tr>
-                <tr><td>Quiebres</td><td>${stats.quiebres}</td></tr>
-                <tr><td>Penales</td><td>${stats.penal}</td></tr>
-                <tr><td>Pérdidas</td><td>${stats.perdidas}</td></tr>
-                <tr><td>Recuperadas</td><td>${stats.recuperadas}</td></tr>
-                <tr><td>Line +</td><td>${stats.linesPos}</td></tr>
-                <tr><td>Line -</td><td>${stats.linesNeg}</td></tr>
-                <tr><td>Line Robado</td><td>${stats.linesRob}</td></tr>
-                <tr><td>Scrum +</td><td>${stats.scrumsPos}</td></tr>
-                <tr><td>Scrum -</td><td>${stats.scrumsNeg}</td></tr>
-                <tr><td>Tarjetas Amarillas</td><td style="color: #d32f2f;">${stats.amarillas}</td></tr>
-                <tr><td>Tarjetas Rojas</td><td style="color: #d32f2f;">${stats.rojas}</td></tr>
-            </tbody>
-        </table>
+        ${tablaAcciones}
         
         ${eventosPartido.length === 0 ? `
             <div style="text-align: center; padding: 20px; color: #999; margin-top: 20px;">
@@ -1080,6 +1097,138 @@ function cargarEstadisticasActual() {
     `
     
     document.getElementById('statsActual').innerHTML = html
+}
+
+function generarTablaAcciones(eventos) {
+    const stats = {
+        tries: eventos.filter(e => e.accion === 'Try').length,
+        drops: eventos.filter(e => e.accion === 'Drop').length,
+        conversionesOK: eventos.filter(e => e.accion === 'Conversión ➕').length,
+        conversionesMal: eventos.filter(e => e.accion === 'Conversión ➖').length,
+        penales: eventos.filter(e => e.accion === 'Penal').length,
+        tacklesPos: eventos.filter(e => e.accion === 'Tackle ➕').length,
+        tacklesNeg: eventos.filter(e => e.accion === 'Tackle ➖').length,
+        quiebres: eventos.filter(e => e.accion === 'Quiebre').length,
+        recepcionMas: eventos.filter(e => e.accion === 'Recepción ➕').length,
+        recepcionMenos: eventos.filter(e => e.accion === 'Recepción ➖').length,
+        avanceMas: eventos.filter(e => e.accion === 'Avance 🦶 ➕').length,
+        avanceMenos: eventos.filter(e => e.accion === 'Avance 🦶 ➖').length,
+        perdidas: eventos.filter(e => e.accion === '🏉 Perdida').length,
+        recuperadas: eventos.filter(e => e.accion === '🏉 Recuperada').length,
+        linesPos: eventos.filter(e => e.accion === 'Line ➕').length,
+        linesNeg: eventos.filter(e => e.accion === 'Line ➖').length,
+        linesRob: eventos.filter(e => e.accion === 'Line Robado').length,
+        scrumsPos: eventos.filter(e => e.accion === 'Scrum ➕').length,
+        scrumsNeg: eventos.filter(e => e.accion === 'Scrum ➖').length,
+        amarillas: eventos.filter(e => e.accion === 'Tarjeta 🟨').length,
+        rojas: eventos.filter(e => e.accion === 'Tarjeta 🟥').length
+    }
+    
+    return `
+        <table class="stats-tabla">
+            <thead>
+                <tr><th>Acción</th><th>Cantidad</th></tr>
+            </thead>
+            <tbody>
+                <tr><td>Tries</td><td class="destacado">${stats.tries}</td></tr>
+                <tr><td>Drops</td><td>${stats.drops}</td></tr>
+                <tr><td>Conversiones +</td><td>${stats.conversionesOK}</td></tr>
+                <tr><td>Conversiones -</td><td>${stats.conversionesMal}</td></tr>
+                <tr><td>Penales</td><td>${stats.penales}</td></tr>
+                <tr><td>Tackles +</td><td>${stats.tacklesPos}</td></tr>
+                <tr><td>Tackles -</td><td>${stats.tacklesNeg}</td></tr>
+                <tr><td>Quiebres</td><td>${stats.quiebres}</td></tr>
+                <tr><td>Recepciones +</td><td>${stats.recepcionMas}</td></tr>
+                <tr><td>Recepciones -</td><td>${stats.recepcionMenos}</td></tr>
+                <tr><td>Avance 🦶 +</td><td>${stats.avanceMas}</td></tr>
+                <tr><td>Avance 🦶 -</td><td>${stats.avanceMenos}</td></tr>
+                <tr><td>Pérdidas</td><td>${stats.perdidas}</td></tr>
+                <tr><td>Recuperadas</td><td>${stats.recuperadas}</td></tr>
+                <tr><td>Line +</td><td>${stats.linesPos}</td></tr>
+                <tr><td>Line -</td><td>${stats.linesNeg}</td></tr>
+                <tr><td>Line Robado</td><td>${stats.linesRob}</td></tr>
+                <tr><td>Scrum +</td><td>${stats.scrumsPos}</td></tr>
+                <tr><td>Scrum -</td><td>${stats.scrumsNeg}</td></tr>
+                <tr><td>Tarjetas 🟨</td><td style="color: #d32f2f;">${stats.amarillas}</td></tr>
+                <tr><td>Tarjetas 🟥</td><td style="color: #d32f2f;">${stats.rojas}</td></tr>
+            </tbody>
+        </table>
+    `
+}
+
+function generarTablaJugadores(statsJugadores, esHistorico = false) {
+    // Convertir a array y ordenar por tries descendente
+    const jugadoresArray = Object.values(statsJugadores)
+        .filter(j => esHistorico ? j.partidosJugados > 0 : true)
+        .sort((a, b) => b.tries - a.tries)
+    
+    if (jugadoresArray.length === 0) {
+        return '<div style="text-align: center; padding: 20px; color: #666;">No hay datos de jugadores</div>'
+    }
+    
+    let html = `
+        <div style="overflow-x: auto;">
+            <table class="stats-tabla" style="min-width: 750px;">
+                <thead>
+                    <tr>
+                        <th>Jugador</th>
+                        <th>Pts</th>
+                        ${esHistorico ? '<th>PJ</th>' : ''}
+                        <th>Try</th>
+                        <th>Dr</th>
+                        <th>Cv+</th>
+                        <th>Cv-</th>
+                        <th>Tk+</th>
+                        <th>Tk-</th>
+                        <th>Pe</th>
+                        <th>Q</th>
+                        <th>Rc+</th>
+                        <th>Rc-</th>
+                        <th>Av+</th>
+                        <th>Av-</th>
+                        <th>PP</th>
+                        <th>PR</th>
+                        <th>🟨</th>
+                        <th>🟥</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `
+    
+    jugadoresArray.forEach(j => {
+        const puntos = (j.tries * 5) + (j.conversionesOK * 2) + (j.drops * 3)
+        html += `
+            <tr>
+                <td style="text-align: left;">${j.nombre}</td>
+                <td style="text-align: center; font-weight: bold; color: #1b5e20;">${puntos}</td>
+                ${esHistorico ? `<td style="text-align: center;">${j.partidosJugados || 0}</td>` : ''}
+                <td style="text-align: center;">${j.tries || 0}</td>
+                <td style="text-align: center;">${j.drops || 0}</td>
+                <td style="text-align: center;">${j.conversionesOK || 0}</td>
+                <td style="text-align: center;">${j.conversionesMal || 0}</td>
+                <td style="text-align: center;">${j.tacklesPos || 0}</td>
+                <td style="text-align: center;">${j.tacklesNeg || 0}</td>
+                <td style="text-align: center;">${j.penales || 0}</td>
+                <td style="text-align: center;">${j.quiebres || 0}</td>
+                <td style="text-align: center;">${j.recepcionMas || 0}</td>
+                <td style="text-align: center;">${j.recepcionMenos || 0}</td>
+                <td style="text-align: center;">${j.avanceMas || 0}</td>
+                <td style="text-align: center;">${j.avanceMenos || 0}</td>
+                <td style="text-align: center;">${j.perdidas || 0}</td>
+                <td style="text-align: center;">${j.recuperadas || 0}</td>
+                <td style="text-align: center; color: ${j.amarillas > 0 ? '#d32f2f' : 'inherit'};">${j.amarillas || 0}</td>
+                <td style="text-align: center; color: ${j.rojas > 0 ? '#d32f2f' : 'inherit'};">${j.rojas || 0}</td>
+            </tr>
+        `
+    })
+    
+    html += `
+                </tbody>
+            </table>
+        </div>
+    `
+    
+    return html
 }
 
 // ===== HISTORIAL DE PARTIDOS =====
@@ -1233,7 +1382,6 @@ function cambiarSubtabJugadores(tab) {
 }
 
 function cargarEstadisticasJugadoresHistorico() {
-    // Todos los partidos (finalizados y el activo) están en historialPartidos
     const hayDatos = historialPartidos.some(p => p.eventos && p.eventos.length > 0)
     if (!hayDatos) {
         document.getElementById('subtabHistoricoJugadores').innerHTML = `
@@ -1245,9 +1393,7 @@ function cargarEstadisticasJugadoresHistorico() {
         return
     }
     
-    // Recopilar todos los eventos de todos los partidos.
-    // El partido activo ya está en historialPartidos (finalizado: false),
-    // por lo que NO hay que agregar 'eventos' por separado.
+    // Recopilar todos los eventos
     let todosLosEventos = []
     historialPartidos.forEach(partido => {
         if (partido.eventos && partido.eventos.length > 0) {
@@ -1255,9 +1401,8 @@ function cargarEstadisticasJugadoresHistorico() {
         }
     })
     
-    // Inicializar estadísticas con todos los jugadores
+    // Inicializar estadísticas
     const statsJugadores = {}
-    
     jugadores.forEach(j => {
         statsJugadores[j.dni] = {
             nombre: j.apodo,
@@ -1267,6 +1412,10 @@ function cargarEstadisticasJugadoresHistorico() {
             tacklesNeg: 0,
             quiebres: 0,
             penales: 0,
+            recepcionMas: 0,
+            recepcionMenos: 0,
+            avanceMas: 0,
+            avanceMenos: 0,
             perdidas: 0,
             recuperadas: 0,
             drops: 0,
@@ -1278,24 +1427,26 @@ function cargarEstadisticasJugadoresHistorico() {
         }
     })
     
-    // Procesar eventos y contar partidos jugados
+    // Contar partidos jugados
     const partidosPorJugador = {}
-    
     todosLosEventos.forEach(e => {
         if (statsJugadores[e.dni]) {
-            // Contar partidos jugados (un partido por combinación dni+partido)
             const clave = `${e.dni}_${e.partido}`
             if (!partidosPorJugador[clave]) {
                 partidosPorJugador[clave] = true
                 statsJugadores[e.dni].partidosJugados++
             }
             
-            // Sumar estadísticas
+            // Sumar estadísticas (mismo código que antes)
             if (e.accion === 'Try') statsJugadores[e.dni].tries++
             else if (e.accion === 'Tackle ➕') statsJugadores[e.dni].tacklesPos++
             else if (e.accion === 'Tackle ➖') statsJugadores[e.dni].tacklesNeg++
             else if (e.accion === 'Quiebre') statsJugadores[e.dni].quiebres++
             else if (e.accion === 'Penal') statsJugadores[e.dni].penales++
+            else if (e.accion === 'Recepción ➕') statsJugadores[e.dni].recepcionMas++
+            else if (e.accion === 'Recepción ➖') statsJugadores[e.dni].recepcionMenos++
+            else if (e.accion === 'Avance 🦶 ➕') statsJugadores[e.dni].avanceMas++
+            else if (e.accion === 'Avance 🦶 ➖') statsJugadores[e.dni].avanceMenos++
             else if (e.accion === '🏉 Perdida') statsJugadores[e.dni].perdidas++
             else if (e.accion === '🏉 Recuperada') statsJugadores[e.dni].recuperadas++
             else if (e.accion === 'Drop') statsJugadores[e.dni].drops++
@@ -1306,87 +1457,15 @@ function cargarEstadisticasJugadoresHistorico() {
         }
     })
     
-    // Calcular puntos y filtrar jugadores con participación
-    const jugadoresConDatos = Object.values(statsJugadores)
-        .filter(j => j.partidosJugados > 0 || j.tries > 0 || j.tacklesPos > 0)
-        .map(j => ({
-            ...j,
-            puntos: (j.tries * 5) + (j.conversionesOK * 2) + (j.drops * 3)
-        }))
-        .sort((a, b) => b.puntos - a.puntos)
-    
-    if (jugadoresConDatos.length === 0) {
-        document.getElementById('subtabHistoricoJugadores').innerHTML = `
-            <div style="text-align: center; padding: 40px; color: #666;">
-                No hay estadísticas acumuladas
-            </div>
-        `
-        return
-    }
-    
-    // Contar total de partidos (el activo ya está incluido en historialPartidos)
+    const tablaHtml = generarTablaJugadores(statsJugadores, true)
     const totalPartidos = historialPartidos.length
     
-    // Generar tabla
-    let tablaHtml = `
-        <div style="overflow-x: auto;">
-            <table class="stats-tabla" style="min-width: 750px;">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Jugador</th>
-                        <th>Pts</th>
-                        <th>PJ</th>
-                        <th>Try</th>
-                        <th>Tk+</th>
-                        <th>Tk-</th>
-                        <th>Pe</th>
-                        <th>Q</th>
-                        <th>PP</th>
-                        <th>PR</th>
-                        <th>D</th>
-                        <th>Cv+</th>
-                        <th>Cv-</th>
-                        <th>🟨</th>
-                        <th>🟥</th>
-                    </tr>
-                </thead>
-                <tbody>
-    `
-    
-    jugadoresConDatos.forEach(j => {
-        tablaHtml += `
-             <tr>
-                <td style="text-align: center;">${j.numero || '-'}</td>
-                <td style="text-align: left;">${j.nombre}</td>
-                <td style="text-align: center; font-weight: bold; color: #1b5e20;">${j.puntos}</td>
-                <td style="text-align: center;">${j.partidosJugados}</td>
-                <td style="text-align: center;">${j.tries}</td>
-                <td style="text-align: center;">${j.tacklesPos}</td>
-                <td style="text-align: center;">${j.tacklesNeg}</td>
-                <td style="text-align: center;">${j.penales}</td>
-                <td style="text-align: center;">${j.quiebres}</td>
-                <td style="text-align: center;">${j.perdidas}</td>
-                <td style="text-align: center;">${j.recuperadas}</td>
-                <td style="text-align: center;">${j.drops}</td>
-                <td style="text-align: center;">${j.conversionesOK}</td>
-                <td style="text-align: center;">${j.conversionesMal}</td>
-                <td style="text-align: center; color: ${j.amarillas > 0 ? '#d32f2f' : 'inherit'};">${j.amarillas}</td>
-                <td style="text-align: center; color: ${j.rojas > 0 ? '#d32f2f' : 'inherit'};">${j.rojas}</td>
-             </tr>
-        `
-    })
-    
-    tablaHtml += `
-                </tbody>
-             </table>
-        </div>
+    document.getElementById('subtabHistoricoJugadores').innerHTML = `
+        ${tablaHtml}
         <div style="text-align: center; font-size: 11px; color: #666; margin-top: 10px;">
             📊 Estadísticas acumuladas de ${totalPartidos} partido${totalPartidos !== 1 ? 's' : ''}
         </div>
     `
-    
-    document.getElementById('subtabHistoricoJugadores').innerHTML = tablaHtml
 }
 
 function cargarEstadisticasJugadoresActual() {
@@ -1412,6 +1491,10 @@ function cargarEstadisticasJugadoresActual() {
             tacklesNeg: 0,
             quiebres: 0,
             penales: 0,
+            recepcionMas: 0,
+            recepcionMenos: 0,
+            avanceMas: 0,
+            avanceMenos: 0,
             perdidas: 0,
             recuperadas: 0,
             drops: 0,
@@ -1429,6 +1512,10 @@ function cargarEstadisticasJugadoresActual() {
             else if (e.accion === 'Tackle ➖') statsJugadores[e.dni].tacklesNeg++
             else if (e.accion === 'Quiebre') statsJugadores[e.dni].quiebres++
             else if (e.accion === 'Penal') statsJugadores[e.dni].penales++
+            else if (e.accion === 'Recepción ➕') statsJugadores[e.dni].recepcionMas++
+            else if (e.accion === 'Recepción ➖') statsJugadores[e.dni].recepcionMenos++
+            else if (e.accion === 'Avance 🦶 ➕') statsJugadores[e.dni].avanceMas++
+            else if (e.accion === 'Avance 🦶 ➖') statsJugadores[e.dni].avanceMenos++
             else if (e.accion === '🏉 Perdida') statsJugadores[e.dni].perdidas++
             else if (e.accion === '🏉 Recuperada') statsJugadores[e.dni].recuperadas++
             else if (e.accion === 'Drop') statsJugadores[e.dni].drops++
@@ -1439,61 +1526,8 @@ function cargarEstadisticasJugadoresActual() {
         }
     })
     
-    const jugadoresOrdenados = Object.values(statsJugadores)
-        .sort((a, b) => b.tries - a.tries)
-    
-    let html = `
-        <div style="max-height: 500px; overflow-y: auto;">
-            <table class="stats-tabla">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Jugador</th>
-                        <th>Try</th>
-                        <th>Tk+</th>
-                        <th>Tk-</th>
-                        <th>Pe</th>
-                        <th>Q</th>
-                        <th>PP</th>
-                        <th>PR</th>
-                        <th>D</th>
-                        <th>Cv+</th>
-                        <th>Cv-</th>
-                        <th>🟨</th>
-                        <th>🟥</th>
-                     </thead>
-                <tbody>
-    `
-    
-    jugadoresOrdenados.forEach(j => {
-        html += `
-            <tr>
-                <td style="text-align: center;">${j.numero || '-'} </td>
-                <td style="text-align: left;">${j.nombre} </td>
-                <td style="text-align: center; font-weight: bold; color: #1b5e20;">${j.tries} </td>
-                <td style="text-align: center;">${j.tacklesPos} </td>
-                <td style="text-align: center;">${j.tacklesNeg} </td>
-                <td style="text-align: center;">${j.penales}</td>
-                <td style="text-align: center;">${j.quiebres} </td>
-                <td style="text-align: center;">${j.perdidas} </td>
-                <td style="text-align: center;">${j.recuperadas} </td>
-                <td style="text-align: center;">${j.drops} </td>
-                <td style="text-align: center;">${j.conversionesOK} </td>
-                <td style="text-align: center;">${j.conversionesMal} </td>
-                <td style="text-align: center; color: ${j.amarillas > 0 ? '#d32f2f' : 'inherit'};">${j.amarillas} </td>
-                <td style="text-align: center; color: ${j.rojas > 0 ? '#d32f2f' : 'inherit'};">${j.rojas} </td>
-             </tr>
-        `
-    })
-    
-    html += `
-                </tbody>
-             </table>
-        </div>
-    `
-    
-    // IMPORTANTE: Actualizar subtabActualJugadores, NO statsJugadores
-    document.getElementById('subtabActualJugadores').innerHTML = html
+    const tablaHtml = generarTablaJugadores(statsJugadores, false)
+    document.getElementById('subtabActualJugadores').innerHTML = tablaHtml
 }
 
 // ===== GUARDAR PARTIDO EN HISTORIAL =====
@@ -1563,25 +1597,7 @@ function verDetallePartido(partidoId) {
     const puntosRival = partido.puntosRival || 0
     
     // Generar filas de la tabla
-    let filasTabla = `
-        <tr><td>Tries</td><td class="destacado">${stats.tries}</td></tr>
-        <tr><td>Conversiones +</td><td>${stats.conversionesOK}</td></tr>
-        <tr><td>Conversiones -</td><td>${stats.conversionesMal}</td></tr>
-        <tr><td>Drops/Penal</td><td>${stats.drops}</td></tr>
-        <tr><td>Tackles +</td><td>${stats.tacklesPos}</td></tr>
-        <tr><td>Tackles -</td><td>${stats.tacklesNeg}</td></tr>
-        <tr><td>Quiebres</td><td>${stats.quiebres}</td></tr>
-        <tr><td>Penales</td><td>${stats.penales}</td></tr>
-        <tr><td>Pérdidas</td><td>${stats.perdidas}</td></tr>
-        <tr><td>Recuperadas</td><td>${stats.recuperadas}</td></tr>
-        <tr><td>Line +</td><td>${stats.linesPos}</td></tr>
-        <tr><td>Line -</td><td>${stats.linesNeg}</td></tr>
-        <tr><td>Line Robado</td><td>${stats.linesRob}</td></tr>
-        <tr><td>Scrum +</td><td>${stats.scrumsPos}</td></tr>
-        <tr><td>Scrum -</td><td>${stats.scrumsNeg}</td></tr>
-        <tr><td>Tarjetas Amarillas</td><td style="color: #d32f2f;">${stats.amarillas}</td></tr>
-        <tr><td>Tarjetas Rojas</td><td style="color: #d32f2f;">${stats.rojas}</td></tr>
-    `
+    const tablaAcciones = generarTablaAcciones(eventosPartido)
     
     const modalHtml = `
         <div id="modalDetallePartido" class="modal-overlay">
@@ -1628,14 +1644,8 @@ function verDetallePartido(partidoId) {
                     
                     <h4>Acciones del partido</h4>
                     <table class="stats-tabla">
-                        <thead>
-                            <tr>
-                                <th>Acción</th>
-                                <th>Cantidad</th>
-                            </tr>
-                        </thead>
                         <tbody>
-                            ${filasTabla}
+                            ${tablaAcciones}
                         </tbody>
                     </table>
                     
@@ -1702,11 +1712,8 @@ function finalizarPartido() {
 }
 
 function verJugadoresPartido(partidoId) {
-    console.log('verJugadoresPartido llamado con ID:', partidoId)
-    
     const partido = historialPartidos.find(p => p.id === partidoId)
     if (!partido) {
-        console.error('Partido no encontrado:', partidoId)
         alert("No se encontró el partido")
         return
     }
@@ -1714,117 +1721,65 @@ function verJugadoresPartido(partidoId) {
     const eventosPartido = partido.eventos || []
     
     // Obtener jugadores únicos que participaron
-    const jugadoresUnicos = {}
-    
-    eventosPartido.forEach(e => {
-        if (e.dni && !jugadoresUnicos[e.dni]) {
-            const jugador = jugadores.find(j => j.dni == e.dni)
-            jugadoresUnicos[e.dni] = {
-                dni: e.dni,
-                apodo: jugador ? jugador.apodo : 'Desconocido',
-                numero: jugador ? jugador.camiseta : '-'
-            }
-        }
-    })
-    
-    // Calcular estadísticas por jugador
     const statsJugadores = {}
     
-    Object.keys(jugadoresUnicos).forEach(dni => {
-        statsJugadores[dni] = {
-            ...jugadoresUnicos[dni],
-            tries: 0,
-            tacklesPos: 0,
-            tacklesNeg: 0,
-            quiebres: 0,
-            penales: 0,
-            perdidas: 0,
-            recuperadas: 0,
-            drops: 0,
-            conversionesOK: 0,
-            conversionesMal: 0,
-            amarillas: 0,
-            rojas: 0
+    eventosPartido.forEach(e => {
+        if (e.dni && !statsJugadores[e.dni]) {
+            const jugador = jugadores.find(j => j.dni == e.dni)
+            statsJugadores[e.dni] = {
+                nombre: jugador ? jugador.apodo : 'Desconocido',
+                numero: jugador ? jugador.camiseta : '-',
+                tries: 0,
+                drops: 0,
+                conversionesOK: 0,
+                conversionesMal: 0,
+                tacklesPos: 0,
+                tacklesNeg: 0,
+                quiebres: 0,
+                penales: 0,
+                recepcionMas: 0,
+                recepcionMenos: 0,
+                avanceMas: 0,
+                avanceMenos: 0,
+                perdidas: 0,
+                recuperadas: 0,
+                amarillas: 0,
+                rojas: 0
+            }
         }
     })
     
     eventosPartido.forEach(e => {
         if (statsJugadores[e.dni]) {
             if (e.accion === 'Try') statsJugadores[e.dni].tries++
+            else if (e.accion === 'Drop') statsJugadores[e.dni].drops++
+            else if (e.accion === 'Conversión ➕') statsJugadores[e.dni].conversionesOK++
+            else if (e.accion === 'Conversión ➖') statsJugadores[e.dni].conversionesMal++
             else if (e.accion === 'Tackle ➕') statsJugadores[e.dni].tacklesPos++
             else if (e.accion === 'Tackle ➖') statsJugadores[e.dni].tacklesNeg++
             else if (e.accion === 'Quiebre') statsJugadores[e.dni].quiebres++
             else if (e.accion === 'Penal') statsJugadores[e.dni].penales++
+            else if (e.accion === 'Recepción ➕') statsJugadores[e.dni].recepcionMas++
+            else if (e.accion === 'Recepción ➖') statsJugadores[e.dni].recepcionMenos++
+            else if (e.accion === 'Avance 🦶 ➕') statsJugadores[e.dni].avanceMas++
+            else if (e.accion === 'Avance 🦶 ➖') statsJugadores[e.dni].avanceMenos++
             else if (e.accion === '🏉 Perdida') statsJugadores[e.dni].perdidas++
             else if (e.accion === '🏉 Recuperada') statsJugadores[e.dni].recuperadas++
-            else if (e.accion === 'Drop') statsJugadores[e.dni].drops++
-            else if (e.accion === 'Conversión ➕') statsJugadores[e.dni].conversionesOK++
-            else if (e.accion === 'Conversión ➖') statsJugadores[e.dni].conversionesMal++
             else if (e.accion === 'Tarjeta 🟨') statsJugadores[e.dni].amarillas++
             else if (e.accion === 'Tarjeta 🟥') statsJugadores[e.dni].rojas++
         }
     })
     
-    const jugadoresOrdenados = Object.values(statsJugadores)
-        .sort((a, b) => b.tries - a.tries)
-    
-    let jugadoresHtml = `
-        <div style="max-height: 400px; overflow-y: auto; width: 100%;">
-            <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-                <thead>
-                    <tr style="background: #1b5e20; color: white; position: sticky; top: 0;">
-                        <th style="padding: 8px;">#</th>
-                        <th style="padding: 8px;">Jugador</th>
-                        <th style="padding: 8px;">Try</th>
-                        <th style="padding: 8px;">Tk+</th>
-                        <th style="padding: 8px;">Tk-</th>
-                        <th style="padding: 8px;">Pe</th>
-                        <th style="padding: 8px;">Q</th>
-                        <th style="padding: 8px;">PP</th>
-                        <th style="padding: 8px;">PR</th>
-                        <th style="padding: 8px;">D</th>
-                        <th style="padding: 8px;">Cv+</th>
-                        <th style="padding: 8px;">Cv-</th>
-                        <th style="padding: 8px;">🟨</th>
-                        <th style="padding: 8px;">🟥</th>
-                     </tr>
-                </thead>
-                <tbody>
-    `
-    
-    jugadoresOrdenados.forEach(j => {
-        jugadoresHtml += `
-            <tr style="border-bottom: 1px solid #eee;">
-                <td style="padding: 8px; text-align: center;">${j.numero || '-'}</td>
-                <td style="padding: 8px; text-align: left;">${j.apodo}</td>
-                <td style="padding: 8px; text-align: center; font-weight: bold; color: #1b5e20;">${j.tries}</td>
-                <td style="padding: 8px; text-align: center;">${j.tacklesPos}</td>
-                <td style="padding: 8px; text-align: center;">${j.tacklesNeg}</td>
-                <td style="padding: 8px; text-align: center;">${j.penales}</td>
-                <td style="padding: 8px; text-align: center;">${j.quiebres}</td>
-                <td style="padding: 8px; text-align: center;">${j.perdidas}</td>
-                <td style="padding: 8px; text-align: center;">${j.recuperadas}</td>
-                <td style="padding: 8px; text-align: center;">${j.drops}</td>
-                <td style="padding: 8px; text-align: center;">${j.conversionesOK}</td>
-                <td style="padding: 8px; text-align: center;">${j.conversionesMal}</td>
-                <td style="padding: 8px; text-align: center; color: ${j.amarillas > 0 ? '#d32f2f' : 'inherit'};">${j.amarillas}</td>
-                <td style="padding: 8px; text-align: center; color: ${j.rojas > 0 ? '#d32f2f' : 'inherit'};">${j.rojas}</td>
-             </tr>
-        `
-    })
-    
-    jugadoresHtml += `
-                </tbody>
-             </table>
-        </div>
-        <button class="btn-cerrar-jugadores" onclick="cerrarModalDetalle()" style="width: 100%; background: #1b5e20; color: white; padding: 12px; margin-top: 16px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">Cerrar</button>
-    `
+    const tablaHtml = generarTablaJugadores(statsJugadores, false)
     
     const modalBody = document.querySelector('#modalDetallePartido .modal-body')
     if (modalBody) {
-        modalBody.innerHTML = jugadoresHtml
-    } else {
-        console.error('No se encontró el modal-body')
+        modalBody.innerHTML = `
+            <div style="overflow-x: auto; width: 100%;">
+                ${tablaHtml}
+            </div>
+            <button class="btn-cerrar-jugadores" onclick="cerrarModalDetalle()" style="width: 100%; background: #1b5e20; color: white; padding: 12px; margin-top: 16px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer;">Cerrar</button>
+        `
     }
 }
 
@@ -1839,7 +1794,7 @@ function actualizarHistorialVisual() {
     
     let html = ""
     // Mostrar desde la más reciente a la más antigua
-    for (let i = historialAccionesVisual.length - 1; i >= 0; i--) {
+    for (let i = 0; i < historialAccionesVisual.length; i++) {
         const item = historialAccionesVisual[i]
         const puntosTexto = item.puntos > 0 ? `<span class="puntos">+${item.puntos}</span>` : ""
         html += `
