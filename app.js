@@ -9,6 +9,9 @@ let rivalActual=""
 let partidoEnCurso = false
 let historialAccionesVisual = []  // Array para almacenar las últimas acciones (máximo 5)
 
+let tiempoBase = 0        // segundos acumulados antes de la última pausa
+let timestampInicio = null // momento exacto en que se inició/resumió
+
 let segundos=0
 let corriendo=false
 let partidoIniciado=false
@@ -343,8 +346,9 @@ function iniciarPartido() {
         
         console.log('Nuevo partido creado en historialPartidos:', partidoActual.id)
     }
-    
-    // Resto del código (fuera del if)
+
+    // ===== ARMAR NUEVA LISTA DE TITULARES =====
+    const titularesAnteriores = [...titulares]
     titulares = []
     
     document.querySelectorAll("#tablaJugadores .filaJugador").forEach(f => {
@@ -364,6 +368,54 @@ function iniciarPartido() {
         }
     })
 
+    // ===== REGISTRAR TITULARES O CAMBIOS SEGÚN CORRESPONDA =====
+    if (!partidoIniciado) {
+        // Primera vez: registrar todos como Titular
+        titulares.forEach(t => {
+            eventos.push({
+                partido: partidoActual.id,
+                dni: t.dni,
+                accion: "Titular",
+                tiempo: "00:00",
+                timestamp: new Date().toISOString()
+            })
+        })
+        guardarEventos()
+    } else {
+        // Partido en curso: detectar quién salió y quién entró
+        const dnisAnteriores = titularesAnteriores.map(t => String(t.dni))
+        const dnisNuevos = titulares.map(t => String(t.dni))
+        
+        const salieron = dnisAnteriores.filter(dni => !dnisNuevos.includes(dni))
+        const entraron = dnisNuevos.filter(dni => !dnisAnteriores.includes(dni))
+        
+        const tiempo = document.getElementById("cronometro").innerText
+        
+        salieron.forEach(dni => {
+            eventos.push({
+                partido: partidoActual.id,
+                dni: dni,
+                accion: "Cambio_Sale",
+                tiempo: tiempo,
+                timestamp: new Date().toISOString()
+            })
+        })
+        
+        entraron.forEach(dni => {
+            eventos.push({
+                partido: partidoActual.id,
+                dni: dni,
+                accion: "Cambio_Entra",
+                tiempo: tiempo,
+                timestamp: new Date().toISOString()
+            })
+        })
+        
+        if (salieron.length > 0 || entraron.length > 0) {
+            guardarEventos()
+        }
+    }
+
     document.getElementById("infoPartido").innerText = equipoActual + " vs " + rivalActual
     document.getElementById("pantallaConfig").style.display = "none"
     document.getElementById("pantallaPartido").style.display = "block"
@@ -378,8 +430,12 @@ function iniciarPartido() {
 function crearJugadores(){
     let cont = document.getElementById("jugadores")
     cont.innerHTML = ""
+    
+    const titularesOrdenados = [...titulares].sort((a, b) =>
+        a.apodo.localeCompare(b.apodo, 'es', { sensitivity: 'base' })
+    )
 
-    titulares.forEach(j => {
+    titularesOrdenados.forEach(j => {
         let label = modoJugadores === "camiseta" ? (j.numero || j.apodo) : j.apodo
 
         let b = document.createElement("button")
@@ -527,7 +583,7 @@ function registrarEvento(accion) {
     actualizarColoresBotones()
 }
 
-function iniciarCrono() {
+function iniciarCronoOri() {
     if (segundos === 0 && !corriendo) {
         // Primer inicio
         corriendo = true
@@ -544,6 +600,20 @@ function iniciarCrono() {
         document.getElementById("btnCrono").innerText = "Pausar"
     }
 }
+function iniciarCrono() {
+    if (!corriendo) {
+        // Guardar el momento exacto de inicio/reanudación
+        timestampInicio = Date.now()
+        corriendo = true
+        document.getElementById("btnCrono").innerText = "Pausar"
+    } else {
+        // Al pausar, guardar los segundos acumulados hasta ahora
+        tiempoBase = segundos
+        timestampInicio = null
+        corriendo = false
+        document.getElementById("btnCrono").innerText = "Continuar"
+    }
+}
 
 function actualizarBotonInicio() {
     let b = document.getElementById("btnCrono")
@@ -557,23 +627,20 @@ function actualizarBotonInicio() {
     }
 }
 
-setInterval(()=>{
+setInterval(() => {
+    if (!corriendo) return
 
-if(!corriendo) return
+    // Calcular segundos reales transcurridos desde que arrancó
+    const ahora = Date.now()
+    segundos = tiempoBase + Math.floor((ahora - timestampInicio) / 1000)
 
-segundos++
+    let m = Math.floor(segundos / 60)
+    let s = segundos % 60
+    document.getElementById("cronometro").innerText =
+        String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0")
 
-let m=Math.floor(segundos/60)
-let s=segundos%60
-
-let mm=String(m).padStart(2,"0")
-let ss=String(s).padStart(2,"0")
-
-document.getElementById("cronometro").innerText=mm+":"+ss
-
-actualizarAmarillas()
-
-},1000)
+    actualizarAmarillas()
+}, 1000)
 
 function mostrarPantallaConfig() {
     // Guardar el estado actual del cronómetro antes de salir
@@ -1482,28 +1549,36 @@ function cargarEstadisticasJugadoresActual() {
     
     const statsJugadores = {}
     
+    // Incluir titulares
     titulares.forEach(j => {
         statsJugadores[j.dni] = {
             nombre: j.apodo,
             numero: j.numero,
-            tries: 0,
-            tacklesPos: 0,
-            tacklesNeg: 0,
-            quiebres: 0,
-            penales: 0,
-            recepcionMas: 0,
-            recepcionMenos: 0,
-            avanceMas: 0,
-            avanceMenos: 0,
-            perdidas: 0,
-            recuperadas: 0,
-            drops: 0,
-            conversionesOK: 0,
-            conversionesMal: 0,
-            amarillas: 0,
-            rojas: 0
+            tries: 0, tacklesPos: 0, tacklesNeg: 0, quiebres: 0,
+            penales: 0, recepcionMas: 0, recepcionMenos: 0,
+            avanceMas: 0, avanceMenos: 0, perdidas: 0, recuperadas: 0,
+            drops: 0, conversionesOK: 0, conversionesMal: 0,
+            amarillas: 0, rojas: 0
         }
     })
+
+    // Incluir suplentes que ingresaron
+    eventosPartido
+        .filter(e => e.accion === "Cambio_Entra" && !statsJugadores[e.dni])
+        .forEach(e => {
+            const jugador = jugadores.find(j => j.dni == e.dni)
+            if (jugador) {
+                statsJugadores[e.dni] = {
+                    nombre: jugador.apodo,
+                    numero: jugador.camiseta || "-",
+                    tries: 0, tacklesPos: 0, tacklesNeg: 0, quiebres: 0,
+                    penales: 0, recepcionMas: 0, recepcionMenos: 0,
+                    avanceMas: 0, avanceMenos: 0, perdidas: 0, recuperadas: 0,
+                    drops: 0, conversionesOK: 0, conversionesMal: 0,
+                    amarillas: 0, rojas: 0
+                }
+            }
+        })
     
     eventosPartido.forEach(e => {
         if (statsJugadores[e.dni]) {
@@ -1719,36 +1794,41 @@ function verJugadoresPartido(partidoId) {
     }
     
     const eventosPartido = partido.eventos || []
-    
-    // Obtener jugadores únicos que participaron
     const statsJugadores = {}
     
+    // Primero cargar todos los que tienen evento "Titular" o "Cambio_Entra"
+    eventosPartido
+        .filter(e => e.accion === "Titular" || e.accion === "Cambio_Entra")
+        .forEach(e => {
+            if (e.dni && !statsJugadores[e.dni]) {
+                const jugador = jugadores.find(j => j.dni == e.dni)
+                statsJugadores[e.dni] = {
+                    nombre: jugador ? jugador.apodo : 'Desconocido',
+                    numero: jugador ? jugador.camiseta : '-',
+                    tries: 0, drops: 0, conversionesOK: 0, conversionesMal: 0,
+                    tacklesPos: 0, tacklesNeg: 0, quiebres: 0, penales: 0,
+                    recepcionMas: 0, recepcionMenos: 0, avanceMas: 0, avanceMenos: 0,
+                    perdidas: 0, recuperadas: 0, amarillas: 0, rojas: 0
+                }
+            }
+        })
+
+    // Luego el resto de eventos (por si hay algún dni que no tenga Titular/Cambio_Entra)
     eventosPartido.forEach(e => {
         if (e.dni && !statsJugadores[e.dni]) {
             const jugador = jugadores.find(j => j.dni == e.dni)
             statsJugadores[e.dni] = {
                 nombre: jugador ? jugador.apodo : 'Desconocido',
                 numero: jugador ? jugador.camiseta : '-',
-                tries: 0,
-                drops: 0,
-                conversionesOK: 0,
-                conversionesMal: 0,
-                tacklesPos: 0,
-                tacklesNeg: 0,
-                quiebres: 0,
-                penales: 0,
-                recepcionMas: 0,
-                recepcionMenos: 0,
-                avanceMas: 0,
-                avanceMenos: 0,
-                perdidas: 0,
-                recuperadas: 0,
-                amarillas: 0,
-                rojas: 0
+                tries: 0, drops: 0, conversionesOK: 0, conversionesMal: 0,
+                tacklesPos: 0, tacklesNeg: 0, quiebres: 0, penales: 0,
+                recepcionMas: 0, recepcionMenos: 0, avanceMas: 0, avanceMenos: 0,
+                perdidas: 0, recuperadas: 0, amarillas: 0, rojas: 0
             }
         }
     })
-    
+
+    // Contar acciones de cada jugador
     eventosPartido.forEach(e => {
         if (statsJugadores[e.dni]) {
             if (e.accion === 'Try') statsJugadores[e.dni].tries++
@@ -1836,4 +1916,20 @@ window.addEventListener('jugadoresActualizados', function() {
     console.log('Evento: jugadoresActualizados')
     mostrarTablaJugadores()
     actualizarSeleccion()
+})
+
+document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && corriendo) {
+        // La pantalla volvió — forzar actualización inmediata del cronómetro
+        const ahora = Date.now()
+        segundos = tiempoBase + Math.floor((ahora - timestampInicio) / 1000)
+
+        let m = Math.floor(segundos / 60)
+        let s = segundos % 60
+        document.getElementById("cronometro").innerText =
+            String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0")
+
+        actualizarAmarillas()
+        actualizarColoresBotones()
+    }
 })
