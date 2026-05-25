@@ -116,10 +116,8 @@ function convertirEventosAPartido(partidoId, eventosAgrupados, equipo, rival, fe
         if (accion === 'Try') { tries++; puntosPropio += 5 }
         else if (accion === 'Conversión ➕') { conversionesOK++; puntosPropio += 2 }
         else if (accion === 'Conversión ➖') conversionesMal++
-        else if (accion === 'Drop' || accion === 'Penal') {
-            if (accion === 'Penal') penales++; else drops++
-            puntosPropio += 3
-        }
+        else if (accion === 'Drop') { drops++; puntosPropio += 3 }
+        else if (accion === 'Penal') penales++
         else if (accion === 'Tackle ➕') tacklesPos++
         else if (accion === 'Tackle ➖') tacklesNeg++
         else if (accion === 'Quiebre') quiebres++
