@@ -554,7 +554,7 @@ function registrarEvento(accion) {
 
     // ===== MANEJO DE TARJETAS =====
     if (!esAccionEquipo && accion.includes('🟨')) {
-        let regreso = segundos + (10 * 60)
+        let regreso = segundos + (5 * 60)
         amarillas.push({
             dni: jugadorSeleccionado.dni,
             apodo: jugadorSeleccionado.apodo,
@@ -583,23 +583,6 @@ function registrarEvento(accion) {
     actualizarColoresBotones()
 }
 
-function iniciarCronoOri() {
-    if (segundos === 0 && !corriendo) {
-        // Primer inicio
-        corriendo = true
-        document.getElementById("btnCrono").innerText = "Pausar"
-        return
-    }
-    
-    // Si ya estaba en marcha o pausado
-    if (corriendo) {
-        corriendo = false
-        document.getElementById("btnCrono").innerText = "Continuar"
-    } else {
-        corriendo = true
-        document.getElementById("btnCrono").innerText = "Pausar"
-    }
-}
 function iniciarCrono() {
     if (!corriendo) {
         // Guardar el momento exacto de inicio/reanudación
@@ -1774,7 +1757,7 @@ function finalizarPartido() {
     sheetInput.disabled = false
     
     // Limpiar los campos para el próximo partido
-    equipoInput.value = ""
+    equipoInput.value = "San Albano"
     rivalInput.value = ""
     partidoEnCurso = false
     // ===== FIN LIMPIEZA =====
